@@ -1,0 +1,18 @@
+{
+  "title": "AI Strategy & Transformation Roadmap",
+  "client": "Rogers Communications",
+  "industry": "Telecom",
+  "audience": "C-Suite and Technology Leadership (CTO, CDO, VP Network Strategy)",
+  "objective": "Present a comprehensive AI transformation strategy that positions Rogers as Canada's most AI-native telecom, with a phased roadmap from quick wins to enterprise-scale AI deployment across network operations, customer experience, and revenue assurance.",
+  "key_messages": [
+    "Rogers has a 3-year window to become Canada's most AI-native telecom before competitors close the gap",
+    "Network operations and CX automation represent $180M in annual savings potential in Years 1–2 alone",
+    "A modular AI platform approach avoids vendor lock-in and enables rapid capability scaling",
+    "Governance and responsible AI frameworks are non-negotiable for regulatory compliance and brand trust",
+    "This roadmap delivers measurable ROI at each phase — each investment phase self-funds the next"
+  ],
+  "tone": "executive",
+  "slide_count_target": 10,
+  "brand": "mobilelive",
+  "additional_context": "Rogers is evaluating AI investments following a $1.2B technology modernization program. Key stakeholders include the CTO, Chief Data Officer, and VP of Network Strategy. The audience is skeptical of vendor hype and demands concrete numbers, realistic timelines, and a clear governance framework. Reference mobileLIVE as the strategic delivery partner. Avoid generic AI buzzwords — use specific, measurable outcomes."
+}
