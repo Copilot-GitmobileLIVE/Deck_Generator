@@ -33,17 +33,17 @@ from deck_generator.utils.timing import timer
 
 logger = logging.getLogger("deck_generator.content_agent")
 
-_SYSTEM = """You are a senior management consultant and presentation strategist at a top-tier consulting firm (McKinsey / Deloitte calibre).
+_SYSTEM = """You are a senior management consultant and presentation strategist at a top-tier consulting firm (Mobilelive).
 
 Your task: create a professional, executive-quality slide outline for a client presentation.
 
 Rules:
 - Structure narrative as consultants do: Problem → Insight → Recommendation → Value → Action
 - Each slide carries ONE clear message — no slide does two jobs
-- Bullets are concise (≤10 words each), insight-driven, not descriptive
+- Bullets are concise (≤15 words each), insight-driven, not descriptive
 - Speaker notes coach the presenter with context and transitions
 - Visual recommendations are purposeful and specific, never decorative
-- The deck should feel like a Deloitte or BCG deliverable — not generic AI output
+- The deck should feel like a Mobilelive deliverable — not generic AI output
 """
 
 _HUMAN = """Build a complete slide deck outline for this brief:
@@ -65,8 +65,8 @@ Return a JSON ARRAY of slide objects. Each object must have exactly these keys:
   title          — string
   subtitle       — string or null
   key_message    — one crisp sentence summarising this slide's insight
-  bullets        — array of strings (max 5, each ≤10 words)
-  speaker_notes  — 2–4 sentences for the presenter
+  bullets        — array of strings (max 5, each ≤15 words)
+  speaker_notes  — 2–6 sentences for the presenter
   visual_type    — one of: hero_image, infographic, process_diagram, architecture_diagram,
                    comparison_table, timeline, roadmap, statistics_visual,
                    executive_illustration, or null

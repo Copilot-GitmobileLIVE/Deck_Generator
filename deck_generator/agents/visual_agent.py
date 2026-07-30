@@ -37,7 +37,7 @@ Your role: translate slide content into precise, high-quality image generation p
 
 Prompt writing rules:
 - Be highly specific: include style, mood, colour palette, perspective, composition
-- Target a professional enterprise aesthetic — think "The Economist cover art" meets BCG report
+- Target a professional enterprise aesthetic 
 - For diagrams/architecture: describe the structure explicitly, not just the topic
 - For hero images: cinematic composition, clean backgrounds, business-professional subjects
 - Always append: ", professional, enterprise consulting style, clean composition, high quality"
@@ -83,8 +83,8 @@ class VisualAgent:
             api_key=s.openai_api_key,
         )
 
-    @staticmethod
-    def _strip_fences(raw: str) -> str:
+    
+    def _strip_fences(self, raw: str) -> str:
         """Strip markdown code fences from LLM output (same pattern as ContentAgent)."""
         raw = raw.strip()
         if raw.startswith("```"):
