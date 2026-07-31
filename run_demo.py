@@ -8,7 +8,6 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import sys
 import time
@@ -36,6 +35,7 @@ except ImportError:
     _RICH = False
 
 from deck_generator.models import DeckBrief, DeckState
+from deck_generator.utils.brief_validator import BriefValidationError, validate_and_fix_brief
 from deck_generator.workflow.graph import build_deck_graph
 
 logger = logging.getLogger("deck_generator.demo")
@@ -105,9 +105,7 @@ def _print_results(final: DeckState, elapsed: float) -> None:
 
 async def run_pipeline(brief_path: str) -> DeckState:
     """Load brief from JSON, run the full graph, return final DeckState."""
-    with open(brief_path, "r", encoding="utf-8") as fh:
-        data = json.load(fh)
-
+    data = validate_and_fix_brief(brief_path)
     brief = DeckBrief(**data)
 
     initial_state = DeckState(
@@ -142,7 +140,14 @@ def main() -> None:
             print(f"ERROR: {msg}")
         sys.exit(1)
 
-    final = asyncio.run(run_pipeline(brief_file))
+    try:
+        final = asyncio.run(run_pipeline(brief_file))
+    except BriefValidationError as exc:
+        if _RICH:
+            _console.print(f"[red]BRIEF VALIDATION ERROR:[/red] {exc}")
+        else:
+            print(f"BRIEF VALIDATION ERROR: {exc}")
+        sys.exit(1)
 
     if final.pptx_path and Path(final.pptx_path).exists():
         sys.exit(0)

@@ -1,0 +1,18 @@
+{
+  "title": "AI Eval System",
+  "client": "Rogers Communications",
+  "industry": "Telecom",
+  "audience": "Developer and architecture team",
+  "objective": "Present a comprehensive AI Evaluation system that can evaluate any AI agent and provide a scoring card for relevant metrics.",
+  "key_messages": [
+    "No consistent process exists to ensure AI agents comply with company policies, security requirements, cost constraints, and quality standards",
+    "An enterprise-wide AI Agent Governance and Evaluation System is needed to validate every agent before and after deployment",
+    "Agents must produce accurate, relevant, and reliable results while protecting sensitive data and meeting compliance requirements",
+    "A centralized governance framework prevents duplication of effort and enables existing solutions to be reused, improved, and extended",
+    "Establishing this framework enables Rogers to scale AI adoption responsibly while maintaining security, compliance, quality, and operational efficiency"
+  ],
+  "tone": "executive",
+  "slide_count_target": 15,
+  "brand": "mobilelive",
+  "additional_context": "Rogers is experiencing a rapid increase in the number of AI agents being developed and deployed across the organization. There is currently no centralized documentation, inventory, or governance system that provides visibility into these agents or helps teams determine which solutions are the most effective, reliable, and aligned with enterprise standards. Employees and teams often lack a clear understanding of which AI agents are available, which ones have been validated, and which are recommended for use. This leads to duplicated efforts, inconsistent user experiences, increased costs, and potential compliance or security risks. Rogers would benefit from a centralized AI Agent Governance, Evaluation, and Monitoring Platform that maintains a catalog of all agents, evaluates them against defined quality metrics (accuracy, reliability, relevance, performance, user satisfaction), verifies alignment with company policies and responsible AI principles, monitors operational metrics such as usage, adoption, cost, and business impact, identifies and reduces duplication, and enables continuous monitoring to ensure agents remain safe, secure, compliant, and effective over time."
+}

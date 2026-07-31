@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv*/
+venv*/
+env/
+
+# Environment / secrets
+.env
+.env.*
+*.key
+
+# Generated pipeline outputs — keep the folder, ignore its contents
+output/*.pptx
+output/images/
+~$*
+
+# Extracted skill archive — derived from mlarteka-pptx.skill, not source
+skill_extracted/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+
+# Node (if any JS tooling is added)
+node_modules/
