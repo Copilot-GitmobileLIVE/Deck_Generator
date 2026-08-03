@@ -29,183 +29,221 @@ import logging
 from typing import List
 
 from deck_generator.models import DeckState, LayoutSpec, SlideSpec, SlideType
+from deck_generator.utils.skill_loader import get_brand_skill
 
 logger = logging.getLogger("deck_generator.layout_agent")
 
 # ── ML arteka (powered by mobileLIVE) brand palette ─────────────────────────
 _ML = {
-    "bg_light": "#FEF5EE",      # Warm Peach — light slide background
-    "bg_dark": "#0F0F37",       # Navy — dark slide background
-    "title_light": "#0F0F37",   # Navy — headings on light slides
-    "title_dark": "#FEFBF8",    # Off-White — headings/text on dark slides
-    "body_light": "#3C3C5E",    # Body Navy — body text on light slides
-    "body_dark": "#D8D8E4",     # Body Light — body text on dark slides
-    "accent": "#E9590C",        # Primary Orange — separator bar, eyebrow, accents
-    "accent_dark_text": "#E9590C",  # Orange text is AA-safe at any size on dark
-    "accent_light_text": "#3C3C5E", # Body navy for small text on light (AA-safe)
-    "caption_light": "#5C5C78", # Caption Navy
-    "caption_dark": "#9F9FB5",  # Caption Light
+    "bg_light": "#FEF5EE",       # Warm Peach — flat light slide background
+    "bg_dark": "#0F0F37",        # Navy — flat dark slide background
+    "title_light": "#0F0F37",    # Navy — headings on light slides
+    "title_dark": "#FEFBF8",     # Off-White — headings/text on dark slides
+    "body_light": "#3C3C5E",     # Body Navy — body text on light slides
+    "body_dark": "#D8D8E4",      # Body Light — body text on dark slides
+    "accent": "#E9590C",         # Primary Orange — tick rule, item accents
+    "eyebrow_light": "#434E80",  # Indigo Grey — eyebrow text on light (AA-safe on peach)
+    "eyebrow_dark": "#E9590C",   # Orange — eyebrow text on dark (AA-safe at any size)
+    "intro_light": "#3C3C5E",    # Body Navy — intro sentence on light slides
+    "intro_dark": "#D8D8E4",     # Body Light — intro sentence on dark slides
+    "caption_light": "#5C5C78",  # Caption Navy
+    "caption_dark": "#9F9FB5",   # Caption Light
+    "takeaway_bg": "#0F0F37",    # Navy fill for bottom takeaway bar
+    "takeaway_text": "#FEFBF8",  # Off-White text in takeaway bar
 }
 
 
 class LayoutAgent:
     """Converts slide type and content into precise LayoutSpec objects.
 
-    Design philosophy:
-    - ML arteka brand: Warm Peach (#FEF5EE) light slides, Navy (#0F0F37) dark slides
-    - Orange (#E9590C) accent separator bar at top of content/agenda slides
-    - Nunito Sans typeface; medium-density type scale (titles 20-28pt, body 11pt)
-    - Split-screen: text left, image right for content slides (50/50)
-    - Full-bleed image + overlaid text for title/closing slides
+    Loads the mlarteka-pptx brand skill at init time to confirm brand grid
+    coordinates are in sync. Layout decisions are deterministic (no LLM);
+    the skill is used for logging and future dynamic coordinate extraction.
     """
 
     # Slide canvas: 16:9 widescreen (13.33 × 7.5 inches)
     W = 13.33
     H = 7.5
 
+    def __init__(self) -> None:
+        skill = get_brand_skill()
+        grid = skill.get_section("Layout Grid")
+        logger.info(
+            "LayoutAgent: brand skill loaded from %s — Layout Grid section: %d chars",
+            skill.skill_path.name, len(grid),
+        )
+
     def _title_layout(self, n: int) -> LayoutSpec:
         return LayoutSpec(
             slide_number=n,
             slide_type=SlideType.TITLE,
-            # Full-bleed background image (photographic, navy scrim applied by image prompt)
+            # Full-bleed background image (photographic, navy scrim from image prompt)
             image_width_inches=self.W,
             image_height_inches=self.H,
             image_left_inches=0.0,
             image_top_inches=0.0,
-            # Title in the lower-left area, clear of the full-bleed image scrim
+            # Title in the lower-left quadrant, above the navy scrim region
             title_left_inches=1.2,
             title_top_inches=2.8,
             title_width_inches=10.5,
-            title_height_inches=1.6,
-            # Subtitle / eyebrow / client line below title
+            title_height_inches=1.4,
+            # Subtitle / deck context line below the title
             content_left_inches=1.2,
-            content_top_inches=4.6,
+            content_top_inches=4.4,
             content_width_inches=10.5,
             content_height_inches=1.2,
             background_color=_ML["bg_dark"],
             title_color=_ML["title_dark"],
             body_color=_ML["body_dark"],
-            accent_color=_ML["accent_dark_text"],
+            accent_color=_ML["eyebrow_dark"],
             header_bar_color=_ML["accent"],
+            eyebrow_color=_ML["eyebrow_dark"],
+            intro_color=_ML["intro_dark"],
+            takeaway_bg_color=_ML["takeaway_bg"],
+            takeaway_text_color=_ML["takeaway_text"],
             title_font_size=28,
             subtitle_font_size=11,
             body_font_size=11,
             font_family="Nunito Sans",
+            show_brand_header=False,  # Full-bleed image slide; no eyebrow lockup
         )
 
     def _agenda_layout(self, n: int) -> LayoutSpec:
         return LayoutSpec(
             slide_number=n,
             slide_type=SlideType.AGENDA,
-            # Image on the right; content zone x 0.5 to 7.6
+            # Image on the right half; content on the left up to x 7.1
             image_width_inches=4.83,
-            image_height_inches=5.8,
+            image_height_inches=5.5,
             image_left_inches=8.0,
-            image_top_inches=1.0,
-            # Title below the orange separator bar (bar is 0.30" at top)
+            image_top_inches=1.5,
+            # Brand header: eyebrow (0.26) → tick rule (0.58) → title (0.85)
             title_left_inches=0.5,
-            title_top_inches=0.38,
+            title_top_inches=0.85,
             title_width_inches=7.1,
             title_height_inches=0.72,
+            # Content zone: y 2.2 to 6.2
             content_left_inches=0.5,
-            content_top_inches=1.25,
+            content_top_inches=2.2,
             content_width_inches=7.1,
-            content_height_inches=4.95,
+            content_height_inches=4.0,
             background_color=_ML["bg_light"],
             title_color=_ML["title_light"],
             body_color=_ML["body_light"],
-            accent_color=_ML["accent_light_text"],
+            accent_color=_ML["accent"],
             header_bar_color=_ML["accent"],
+            eyebrow_color=_ML["eyebrow_light"],
+            intro_color=_ML["intro_light"],
+            takeaway_bg_color=_ML["takeaway_bg"],
+            takeaway_text_color=_ML["takeaway_text"],
             title_font_size=20,
             subtitle_font_size=11,
             body_font_size=11,
             font_family="Nunito Sans",
+            show_brand_header=True,
         )
 
     def _content_layout(self, n: int) -> LayoutSpec:
         return LayoutSpec(
             slide_number=n,
             slide_type=SlideType.CONTENT,
-            # Image: right 50% (x 7.0 to 12.83)
-            image_width_inches=5.83,
-            image_height_inches=5.0,
-            image_left_inches=7.0,
-            image_top_inches=1.25,
-            # Title: left portion, width stops before logo zone (x > 11.2)
+            # Image: right 50% panel (x 7.0 to 12.83), spans the content zone
+            image_width_inches=5.5,
+            image_height_inches=4.7,
+            image_left_inches=7.1,
+            image_top_inches=1.5,
+            # Title: left side; width stops before logo zone at x 11.2
             title_left_inches=0.5,
-            title_top_inches=0.38,
-            title_width_inches=10.8,
+            title_top_inches=0.85,
+            title_width_inches=10.7,
             title_height_inches=0.72,
-            # Content: left half, content zone y 1.25 to 6.2
+            # Content zone: y 2.2 to 6.2 (per brand grid), left half
             content_left_inches=0.5,
-            content_top_inches=1.25,
+            content_top_inches=2.2,
             content_width_inches=6.2,
-            content_height_inches=4.95,
+            content_height_inches=4.0,
             background_color=_ML["bg_light"],
             title_color=_ML["title_light"],
             body_color=_ML["body_light"],
-            accent_color=_ML["accent_light_text"],
+            accent_color=_ML["accent"],
             header_bar_color=_ML["accent"],
+            eyebrow_color=_ML["eyebrow_light"],
+            intro_color=_ML["intro_light"],
+            takeaway_bg_color=_ML["takeaway_bg"],
+            takeaway_text_color=_ML["takeaway_text"],
             title_font_size=20,
             subtitle_font_size=11,
             body_font_size=11,
             font_family="Nunito Sans",
+            show_brand_header=True,
         )
 
     def _section_divider_layout(self, n: int) -> LayoutSpec:
         return LayoutSpec(
             slide_number=n,
             slide_type=SlideType.SECTION_DIVIDER,
-            # Full-height image on the right half (photographic, navy scrim)
+            # Full-height image on the right half (photographic placeholder, navy scrim)
             image_width_inches=6.0,
             image_height_inches=self.H,
             image_left_inches=7.33,
             image_top_inches=0.0,
+            # Section number + title on the left dark panel, generous negative space
             title_left_inches=0.7,
-            title_top_inches=2.7,
-            title_width_inches=6.0,
+            title_top_inches=2.8,
+            title_width_inches=6.2,
             title_height_inches=1.4,
             content_left_inches=0.7,
-            content_top_inches=4.3,
-            content_width_inches=6.0,
-            content_height_inches=2.0,
+            content_top_inches=4.4,
+            content_width_inches=6.2,
+            content_height_inches=1.8,
             background_color=_ML["bg_dark"],
             title_color=_ML["title_dark"],
             body_color=_ML["body_dark"],
-            accent_color=_ML["accent_dark_text"],
+            accent_color=_ML["eyebrow_dark"],
             header_bar_color=_ML["accent"],
+            eyebrow_color=_ML["eyebrow_dark"],
+            intro_color=_ML["intro_dark"],
+            takeaway_bg_color=_ML["takeaway_bg"],
+            takeaway_text_color=_ML["takeaway_text"],
             title_font_size=26,
             subtitle_font_size=11,
             body_font_size=11,
             font_family="Nunito Sans",
+            show_brand_header=False,  # Dark section break; eyebrow sits mid-slide, not top
         )
 
     def _closing_layout(self, n: int) -> LayoutSpec:
         return LayoutSpec(
             slide_number=n,
             slide_type=SlideType.CLOSING,
-            # Full-bleed background (flat navy or photographic with navy scrim)
+            # Full-bleed dark background (flat navy or photographic with navy scrim)
             image_width_inches=self.W,
             image_height_inches=self.H,
             image_left_inches=0.0,
             image_top_inches=0.0,
+            # CTA headline centered; logo centered below (per brand spec for closing)
             title_left_inches=1.5,
-            title_top_inches=2.7,
+            title_top_inches=2.8,
             title_width_inches=10.0,
             title_height_inches=1.6,
             content_left_inches=1.5,
-            content_top_inches=4.5,
+            content_top_inches=4.6,
             content_width_inches=10.0,
             content_height_inches=1.6,
             background_color=_ML["bg_dark"],
             title_color=_ML["title_dark"],
             body_color=_ML["body_dark"],
-            accent_color=_ML["accent_dark_text"],
+            accent_color=_ML["eyebrow_dark"],
             header_bar_color=_ML["accent"],
+            eyebrow_color=_ML["eyebrow_dark"],
+            intro_color=_ML["intro_dark"],
+            takeaway_bg_color=_ML["takeaway_bg"],
+            takeaway_text_color=_ML["takeaway_text"],
             title_font_size=28,
             subtitle_font_size=11,
             body_font_size=11,
             font_family="Nunito Sans",
+            show_brand_header=False,  # Full-bleed CTA slide; no eyebrow header lockup
         )
 
     def run(self, state: DeckState) -> dict:
@@ -236,7 +274,7 @@ class LayoutAgent:
             builder = dispatch.get(slide.slide_type, self._content_layout)
             specs.append(builder(slide.slide_number))
 
-        log_entry = f"LayoutAgent: {len(specs)} layout specs built"
+        log_entry = f"LayoutAgent: {len(specs)} layout specs built (brand: mlarteka-pptx)"
         logger.info(log_entry)
 
         return {

@@ -113,8 +113,11 @@ class SlideSpec(BaseModel):
     slide_type: SlideType = SlideType.CONTENT  # Determines which LayoutSpec template is used
     title: str                      # Bold heading displayed at the top of the slide
     subtitle: Optional[str] = None  # Secondary heading (mainly used on title/closing slides)
+    eyebrow: str = ""               # ALL CAPS eyebrow label (2-4 words), e.g. "BANKING PRIORITIES"
+    intro_line: str = ""            # One-line intro sentence below the title
+    takeaway: str = ""              # Bottom takeaway bar "so what" sentence
     key_message: str                # The ONE insight this slide must communicate
-    bullets: List[str] = Field(default_factory=list)  # Supporting evidence (max 5, each ≤10 words)
+    bullets: List[str] = Field(default_factory=list)  # Supporting evidence (max 5, each ≤15 words)
     speaker_notes: str = ""         # Presenter guidance — not shown on screen
     visual_type: Optional[VisualType] = None   # Hints to VisualAgent which visual category fits
     visual_description: str = ""    # Detailed description of what the image should literally show
@@ -222,17 +225,28 @@ class LayoutSpec(BaseModel):
     content_height_inches: float = 4.0
 
     # ── Colours (hex strings, validated as strings only — not RGBColor) ─
-    background_color: str = "#FFFFFF"   # Slide fill
-    title_color: str = "#0A1628"        # Title text colour
-    body_color: str = "#2D3748"         # Bullet / body text colour
-    accent_color: str = "#0057B8"       # Key message text + interactive elements
-    header_bar_color: str = "#0057B8"   # Thin accent bar at the top of content slides
+    background_color: str = "#FEF5EE"   # Slide fill (ML arteka Warm Peach default)
+    title_color: str = "#0F0F37"        # Title text colour (Navy)
+    body_color: str = "#3C3C5E"         # Bullet / body text colour (Body Navy)
+    accent_color: str = "#E9590C"       # Orange — item accents, tick rule, eyebrow on dark
+    header_bar_color: str = "#E9590C"   # Orange tick rule under eyebrow
+    eyebrow_color: str = "#434E80"      # Indigo Grey — eyebrow text on light slides (AA-safe)
+    intro_color: str = "#3C3C5E"        # Body navy — intro sentence on light slides
+    takeaway_bg_color: str = "#0F0F37"  # Navy — full-width takeaway bar fill
+    takeaway_text_color: str = "#FEFBF8" # Off-White — takeaway bar text
+
+    # ── Brand header lockup positions (inches from slide top-left) ─
+    eyebrow_top_inches: float = 0.26    # ALL CAPS eyebrow text
+    intro_top_inches: float = 1.55      # One-line intro sentence below title
+    takeaway_top_inches: float = 6.45   # Full-width bottom takeaway bar
+    takeaway_height_inches: float = 0.55
+    show_brand_header: bool = True      # False on title/closing (full-bleed image slides)
 
     # ── Typography ────────────────────────────────────────────
-    title_font_size: int = 28      # Points
-    subtitle_font_size: int = 18   # Key message / subtitle line
-    body_font_size: int = 14       # Bullet points
-    font_family: str = "Calibri"   # Must be available on the rendering machine
+    title_font_size: int = 20      # Points (18-20pt for content slides)
+    subtitle_font_size: int = 11   # Key message / subtitle line
+    body_font_size: int = 11       # Bullet points
+    font_family: str = "Nunito Sans"  # ML arteka brand typeface; Arial is rendering fallback
 
 
 class QAIssue(BaseModel):

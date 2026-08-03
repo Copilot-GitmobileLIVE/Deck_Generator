@@ -29,23 +29,26 @@ from langchain_openai import ChatOpenAI
 
 from deck_generator.config import get_settings
 from deck_generator.models import DeckBrief, DeckState, SlideSpec, SlideType, VisualType
+from deck_generator.utils.skill_loader import get_brand_skill
 from deck_generator.utils.timing import timer
 
 logger = logging.getLogger("deck_generator.content_agent")
 
-_SYSTEM = """You are a senior management consultant and presentation strategist at a top-tier consulting firm (Mobilelive).
+# Static preamble; authoritative brand rules are appended from the skill at init time.
+_SYSTEM_BASE = """You are a senior management consultant and presentation strategist at ML arteka (powered by mobileLIVE).
 
-Your task: create a professional, executive-quality slide outline for a client presentation.
+Your task: create a professional, executive-quality slide outline following the ML arteka brand system.
 
-Rules:
-- Structure narrative as consultants do: Problem → Insight → Recommendation → Value → Action
-- Each slide carries ONE clear message — no slide does two jobs
-- Bullets are concise (≤15 words each), insight-driven, not descriptive
-- Speaker notes coach the presenter with context and transitions
-- Visual recommendations are purposeful and specific, never decorative
-- The deck should feel like a Mobilelive deliverable — not generic AI output
+Narrative structure: Problem → Insight → Recommendation → Value → Action
+Slide sequencing: Title (dark) → Exec summary → Section dividers (dark) → Content → Recommendation → Closing (dark, CTA).
+
+CRITICAL BRAND RULES (always follow):
+- Titles are action titles in sentence case: one idea, no Title Case, no ALL CAPS.
+- Every content/agenda slide must have an EYEBROW (2-4 ALL CAPS words), INTRO_LINE (one framing sentence), and TAKEAWAY (one "so what" sentence for the bottom bar).
+- No scaffolding on the slide face: caveats, citations, and hedges go in speaker_notes only.
+
+The authoritative ML arteka brand guidelines follow. Apply every rule below exactly:
 """
-
 _HUMAN = """Build a complete slide deck outline for this brief:
 
 Title: {title}
@@ -60,17 +63,20 @@ Tone: {tone}
 Additional Context: {additional_context}
 
 Return a JSON ARRAY of slide objects. Each object must have exactly these keys:
-  slide_number   — integer, starting at 1
-  slide_type     — one of: title, agenda, content, section_divider, closing
-  title          — string
-  subtitle       — string or null
-  key_message    — one crisp sentence summarising this slide's insight
-  bullets        — array of strings (max 5, each ≤15 words)
-  speaker_notes  — 2–6 sentences for the presenter
-  visual_type    — one of: hero_image, infographic, process_diagram, architecture_diagram,
-                   comparison_table, timeline, roadmap, statistics_visual,
-                   executive_illustration, or null
-  visual_description — what the visual should literally show (1–3 sentences)
+  slide_number       — integer, starting at 1
+  slide_type         — one of: title, agenda, content, section_divider, closing
+  title              — action title, sentence case, one idea (no Topic Case)
+  subtitle           — string or null (used only on title and closing slides)
+  eyebrow            — 2-4 words ALL CAPS theme label for content/agenda slides; empty string "" for title/closing/section_divider
+  intro_line         — one plain sentence below the title for content/agenda slides; empty string "" for title/closing/section_divider
+  takeaway           — one bold "so what" sentence for the bottom bar on content slides; empty string "" for title/closing/section_divider/agenda
+  key_message        — one crisp sentence summarising this slide's single insight
+  bullets            — array of strings (max 5, each ≤15 words, insight-driven not descriptive)
+  speaker_notes      — 2-6 sentences for the presenter; include any image prompt here for dark/image slides
+  visual_type        — one of: hero_image, infographic, process_diagram, architecture_diagram,
+                       comparison_table, timeline, roadmap, statistics_visual,
+                       executive_illustration, or null
+  visual_description — what the visual should literally show (1-3 sentences), null for title/closing
 
 IMPORTANT: Return ONLY valid JSON. No markdown code fences. No surrounding text.
 """
@@ -79,20 +85,26 @@ IMPORTANT: Return ONLY valid JSON. No markdown code fences. No surrounding text.
 class ContentAgent:
     """Generates the full slide narrative from a :class:`DeckBrief`.
 
-    This is the first specialist agent in the pipeline.  Its output (a list
-    of SlideSpec objects) defines the structure that every subsequent agent
-    builds upon.  Getting the slide count, types, and key messages right here
-    is critical — downstream agents can only work with what ContentAgent gives them.
+    Loads the mlarteka-pptx brand skill at init time and injects the
+    authoritative Fixed Slide Rules, Typography, and Content Rules sections
+    into the system prompt so the LLM always works from the current skill,
+    not from a summarised static string.
     """
 
     def __init__(self) -> None:
         s = get_settings()
-        # ChatOpenAI is the LangChain wrapper around the OpenAI chat completions API.
-        # temperature=0.4 gives creative but consistent narrative output.
         self._llm = ChatOpenAI(
             model=s.model_content,
             temperature=s.content_temperature,
             api_key=s.openai_api_key,
+        )
+        # Build the system prompt once at init: base intro + live skill sections.
+        skill = get_brand_skill()
+        brand_rules = skill.content_rules_prompt()
+        self._system = _SYSTEM_BASE + brand_rules
+        logger.info(
+            "ContentAgent: loaded brand skill from %s (%d chars of brand rules)",
+            skill.skill_path.name, len(brand_rules),
         )
 
     @staticmethod
@@ -134,9 +146,9 @@ class ContentAgent:
 
         logger.info("ContentAgent: generating content for '%s'", brief.title)
 
-        # Build the two-message prompt: system sets the persona, human supplies the brief.
+        # Build the prompt using the skill-loaded system message (self._system).
         prompt = ChatPromptTemplate.from_messages([
-            ("system", _SYSTEM),
+            ("system", self._system),
             ("human", _HUMAN),
         ])
         # The pipe operator (|) chains the prompt template into the LLM call.
@@ -172,6 +184,10 @@ class ContentAgent:
                 for key in ("visual_type", "subtitle"):
                     if item.get(key) == "null":
                         item[key] = None
+                # Ensure new brand fields default to empty string if absent
+                for key in ("eyebrow", "intro_line", "takeaway", "visual_description", "speaker_notes"):
+                    if item.get(key) is None or item.get(key) == "null":
+                        item[key] = ""
             # Validate each item against the SlideSpec Pydantic model.
             slides: List[SlideSpec] = [SlideSpec(**s) for s in data]
         except Exception as exc:

@@ -27,26 +27,27 @@ from langchain_openai import ChatOpenAI
 
 from deck_generator.config import get_settings
 from deck_generator.models import DeckState, ImageRequest, SlideSpec, SlideType
+from deck_generator.utils.skill_loader import get_brand_skill
 from deck_generator.utils.timing import timer
 
 logger = logging.getLogger("deck_generator.visual_agent")
 
-_SYSTEM = """You are a visual strategist specialising in enterprise consulting presentations.
+# Static preamble; the authoritative Image Placeholders section is appended from the skill.
+_SYSTEM_BASE = """You are a visual strategist for ML arteka (powered by mobileLIVE) consulting decks.
 
 Your role: translate slide content into precise, high-quality image generation prompts.
 
-Prompt writing rules:
-- Be highly specific: include style, mood, colour palette, perspective, composition
-- Target a professional enterprise aesthetic 
-- For diagrams/architecture: describe the structure explicitly, not just the topic
-- For hero images: cinematic composition, clean backgrounds, business-professional subjects
-- Always append: ", professional, enterprise consulting style, clean composition, high quality"
-- Never use stock-photo clichés (handshakes, lightbulbs, generic teamwork shots)
+CRITICAL RULES:
+- Always use real enterprise, operational, and human imagery. NEVER generic AI stock.
+- Write prompts using all 10 slots: subject/action, setting, people, shot, lens, lighting, mood, text-safe region, quality, negatives.
+- Slot 10 always ends: "No text, no logos, no watermarks, no neon or sci-fi glow, no staged stock cliche."
 
 Provider routing:
-- "openai"  → photorealistic, executive portraits, real-world business photography
-- "gemini"  → infographics, diagrams, architecture visuals, abstract conceptual art
-- null      → both providers compete; best image wins in review step
+- "openai"  → photorealistic people, offices, real-world business environments
+- "gemini"  → infographics, process/architecture diagrams, conceptual visuals
+- null      → both providers run; ImageReviewAgent picks the winner
+
+The authoritative ML arteka image guidelines follow. Apply every convention exactly:
 """
 
 _HUMAN = """Generate image prompts for the following slides:
@@ -57,9 +58,9 @@ Return a JSON ARRAY. Each element must have:
   slide_number       — integer matching the slide
   visual_type        — one of: hero_image, infographic, process_diagram, architecture_diagram,
                        comparison_table, timeline, roadmap, statistics_visual, executive_illustration
-  prompt             — detailed image generation prompt (100–200 words)
-  style_hints        — array of 3–5 style keywords (e.g. ["minimal", "dark background", "blue palette"])
-  aspect_ratio       — "16:9" for full-width, "1:1" for inset
+  prompt             — detailed prompt using all 10 slots from the system message (40-70 words)
+  style_hints        — array of 3-5 style keywords, e.g. ["editorial", "warm highlights", "navy palette"]
+  aspect_ratio       — "16:9" for full-width panels, "1:1" for square insets
   preferred_provider — "openai", "gemini", or null
 
 IMPORTANT: Return ONLY valid JSON. No markdown fences. No surrounding text.
@@ -69,21 +70,26 @@ IMPORTANT: Return ONLY valid JSON. No markdown fences. No surrounding text.
 class VisualAgent:
     """Determines visual strategy and crafts image prompts for each slide.
 
-    This agent acts as a bridge between the content layer (SlideSpec) and the
-    image generation layer (ImageRequest).  Its quality directly affects how
-    relevant and professional the final images will be.
+    Loads the mlarteka-pptx brand skill at init time and injects the
+    authoritative Image Placeholders section into the system prompt so image
+    prompts always follow the current skill conventions.
     """
 
     def __init__(self) -> None:
         s = get_settings()
-        # temperature=0.5 allows more creative prompt writing than ContentAgent
         self._llm = ChatOpenAI(
             model=s.model_content,
             temperature=0.5,
             api_key=s.openai_api_key,
         )
-
-    
+        # Build system prompt: base intro + live skill Image Placeholders section.
+        skill = get_brand_skill()
+        image_rules = skill.image_prompt_rules()
+        self._system = _SYSTEM_BASE + image_rules
+        logger.info(
+            "VisualAgent: loaded brand skill from %s (%d chars of image rules)",
+            skill.skill_path.name, len(image_rules),
+        )
     def _strip_fences(self, raw: str) -> str:
         """Strip markdown code fences from LLM output (same pattern as ContentAgent)."""
         raw = raw.strip()
@@ -124,7 +130,7 @@ class VisualAgent:
         )
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", _SYSTEM),
+            ("system", self._system),
             ("human", _HUMAN),
         ])
         chain = prompt | self._llm

@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     output_dir: str = "output"          # Final .pptx files are saved here
     images_dir: str = "output/images"   # PNG images downloaded from OpenAI / Gemini
 
+    # ── Brand skill ───────────────────────────────────────────────────────────
+    # The .skill archive and the directory where it is (or will be) extracted.
+    # skill_loader.py reads from skill_extract_dir first; falls back to
+    # extracting the ZIP if the extracted SKILL.md is absent.
+    skill_file: str = "mlarteka-pptx.skill"        # ZIP archive at project root
+    skill_extract_dir: str = "skill_extracted"      # Target for auto-extraction
+
     # ── Workflow tuning ───────────────────────────────────────────────────────
     max_retries: int = 2          # How many times QA can send the pipeline back to ContentAgent
     image_generation_timeout: int = 120   # Per-image timeout in seconds (not yet enforced via asyncio)

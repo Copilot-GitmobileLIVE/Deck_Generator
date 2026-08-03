@@ -55,42 +55,50 @@ class SlideRenderer:
     """
 
     def _set_background(self, slide: Slide, layout: LayoutSpec) -> None:
-        """Fill the entire slide background with the layout's background colour.
-
-        This operates on the slide's background object directly (not an added
-        shape), so it stays behind all other shapes regardless of z-order.
-        """
+        """Fill the entire slide background with the layout's background colour."""
         fill = slide.background.fill
-        fill.solid()                               # Switch fill type to solid colour
+        fill.solid()
         fill.fore_color.rgb = _rgb(layout.background_color)
 
-    def _add_accent_bar(self, slide: Slide, layout: LayoutSpec) -> None:
-        """Add a thin coloured rectangle at the very top of the slide.
+    def _add_eyebrow(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
+        """Add the ALL CAPS eyebrow label above the title (brand header lockup).
 
-        This is the brand accent bar used on CONTENT and AGENDA slides to
-        anchor the eye at the top and signal the slide template type.
-        Title, section divider, and closing slides have their own visual
-        treatment (full-bleed image or dark background) so the bar is skipped.
+        Light slides: Indigo Grey #434E80 (AA-safe on Warm Peach).
+        Dark slides: Orange #E9590C (AA-safe at any size on navy).
         """
-        if layout.slide_type not in (SlideType.CONTENT, SlideType.AGENDA):
+        if not layout.show_brand_header:
             return
-        bar = slide.shapes.add_shape(
-            MSO_AUTO_SHAPE_TYPE.RECTANGLE,
-            Inches(0), Inches(0),       # Top-left corner of the slide
-            Inches(13.33), Inches(0.30), # Full width, 0.30 inch tall
+        text = spec.eyebrow.upper() if spec.eyebrow else spec.title[:30].upper()
+        box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(layout.eyebrow_top_inches),
+            Inches(9.0), Inches(0.28),
         )
-        bar.fill.solid()
-        bar.fill.fore_color.rgb = _rgb(layout.header_bar_color)
-        bar.line.width = 0  # Remove the default 1pt border so it looks clean
+        tf = box.text_frame
+        tf.word_wrap = False
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = text
+        run.font.bold = True
+        run.font.size = Pt(9)
+        run.font.color.rgb = _rgb(layout.eyebrow_color)
+        run.font.name = layout.font_family
+        # letter spacing: charSpacing equivalent via XML is not needed; standard tracking
+
+    def _add_tick_rule(self, slide: Slide, layout: LayoutSpec) -> None:
+        """Add a short orange tick rule below the eyebrow (~0.77\" wide, 2pt tall)."""
+        if not layout.show_brand_header:
+            return
+        rule = slide.shapes.add_shape(
+            MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+            Inches(0.5), Inches(0.56),
+            Inches(0.77), Inches(0.03),
+        )
+        rule.fill.solid()
+        rule.fill.fore_color.rgb = _rgb("#E9590C")  # Always orange, per brand spec
+        rule.line.width = 0
 
     def _add_title(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
-        """Add the main title text box at the position defined in the layout.
-
-        add_textbox() takes (left, top, width, height) in EMU.  We use Inches()
-        to convert from the human-readable inch values stored in LayoutSpec.
-        The text frame is set to word_wrap=True so long titles reflow within
-        the box rather than overflowing to the right.
-        """
+        """Add the main title text box at the position defined in the layout."""
         box = slide.shapes.add_textbox(
             Inches(layout.title_left_inches),
             Inches(layout.title_top_inches),
@@ -99,15 +107,34 @@ class SlideRenderer:
         )
         tf = box.text_frame
         tf.word_wrap = True
-        # Paragraphs and runs are the two text layers in python-pptx.
-        # A paragraph can contain multiple runs with different formatting,
-        # but here we use a single run per paragraph.
         p = tf.paragraphs[0]
         run = p.add_run()
         run.text = spec.title
         run.font.bold = True
         run.font.size = Pt(layout.title_font_size)
         run.font.color.rgb = _rgb(layout.title_color)
+        run.font.name = layout.font_family
+
+    def _add_intro_line(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
+        """Add the one-line intro sentence below the title (brand header lockup)."""
+        if not layout.show_brand_header:
+            return
+        text = spec.intro_line or spec.key_message
+        if not text:
+            return
+        box = slide.shapes.add_textbox(
+            Inches(layout.title_left_inches),
+            Inches(layout.intro_top_inches),
+            Inches(layout.content_width_inches),
+            Inches(0.40),
+        )
+        tf = box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = text
+        run.font.size = Pt(10)
+        run.font.color.rgb = _rgb(layout.intro_color)
         run.font.name = layout.font_family
 
     def _add_subtitle_line(
@@ -140,7 +167,7 @@ class SlideRenderer:
             Inches(layout.content_left_inches),
             Inches(layout.content_top_inches),
             Inches(layout.content_width_inches),
-            Inches(0.58),
+            Inches(0.50),
         )
         tf = box.text_frame
         tf.word_wrap = True
@@ -149,49 +176,65 @@ class SlideRenderer:
         run.text = spec.key_message
         run.font.bold = True
         run.font.size = Pt(layout.subtitle_font_size)
-        run.font.color.rgb = _rgb(layout.accent_color)
+        run.font.color.rgb = _rgb(layout.body_color)
         run.font.name = layout.font_family
 
     def _add_bullets(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
-        """Add the bullet-point list below the key message text box.
-
-        The bullet top position is offset 0.68 inches below content_top_inches
-        to leave room for the key message text box that sits above it.
-        Each bullet uses a Unicode filled square (▪) as the bullet character
-        rather than relying on PowerPoint's auto-bullet feature, which is
-        harder to control precisely with python-pptx.
-        """
+        """Add bullet points as one native text box with one paragraph per bullet."""
         if not spec.bullets:
             return
-        bullet_top = layout.content_top_inches + 0.68  # Offset below key message
-        available_height = layout.content_height_inches - 0.68
+        bullet_top = layout.content_top_inches + 0.58
+        available_height = layout.content_height_inches - 0.58
         box = slide.shapes.add_textbox(
             Inches(layout.content_left_inches),
             Inches(bullet_top),
             Inches(layout.content_width_inches),
-            Inches(max(available_height, 0.5)),  # Ensure minimum height
+            Inches(max(available_height, 0.5)),
         )
         tf = box.text_frame
         tf.word_wrap = True
 
         for idx, bullet in enumerate(spec.bullets):
-            # First paragraph already exists in a new text frame;
-            # subsequent ones are appended with add_paragraph().
             para = tf.paragraphs[0] if idx == 0 else tf.add_paragraph()
             run = para.add_run()
-            run.text = f"▪  {bullet}"
+            run.text = f"\u25aa  {bullet}"
             run.font.size = Pt(layout.body_font_size)
             run.font.color.rgb = _rgb(layout.body_color)
             run.font.name = layout.font_family
-            para.space_after = Pt(5)
+            para.space_after = Pt(6)
+
+    def _add_takeaway_bar(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
+        """Add the full-width navy bottom bar with the slide's 'so what' sentence."""
+        if not spec.takeaway or not layout.show_brand_header:
+            return
+        # Full-width navy bar
+        bar = slide.shapes.add_shape(
+            MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+            Inches(0.0), Inches(layout.takeaway_top_inches),
+            Inches(13.33), Inches(layout.takeaway_height_inches),
+        )
+        bar.fill.solid()
+        bar.fill.fore_color.rgb = _rgb(layout.takeaway_bg_color)
+        bar.line.width = 0
+
+        # Takeaway text centered in the bar
+        box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(layout.takeaway_top_inches + 0.08),
+            Inches(12.33), Inches(layout.takeaway_height_inches - 0.12),
+        )
+        tf = box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+        run = p.add_run()
+        run.text = spec.takeaway
+        run.font.bold = True
+        run.font.size = Pt(10)
+        run.font.color.rgb = _rgb(layout.takeaway_text_color)
+        run.font.name = layout.font_family
 
     def _add_speaker_notes(self, slide: Slide, spec: SlideSpec) -> None:
-        """Write speaker_notes into the slide's notes pane.
-
-        python-pptx exposes the notes pane via slide.notes_slide.  The notes
-        text frame already exists on every slide; we just set its text.
-        If there are no notes the pane is left empty.
-        """
+        """Write speaker_notes into the slide's notes pane."""
         if not spec.speaker_notes:
             return
         notes_tf = slide.notes_slide.notes_text_frame
@@ -218,10 +261,13 @@ class SlideRenderer:
         spec: SlideSpec,
         layout: LayoutSpec,
     ) -> None:
-        """Apply all text layers to *slide*."""
+        """Apply all text layers to *slide* following the ML arteka brand header lockup."""
         self._set_background(slide, layout)
-        self._add_accent_bar(slide, layout)
+        # Brand header lockup (content/agenda slides only): eyebrow → tick rule → title → intro
+        self._add_eyebrow(slide, spec, layout)
+        self._add_tick_rule(slide, layout)
         self._add_title(slide, spec, layout)
+        self._add_intro_line(slide, spec, layout)
 
         if spec.slide_type in (SlideType.TITLE, SlideType.CLOSING):
             if spec.subtitle:
@@ -235,6 +281,7 @@ class SlideRenderer:
             # CONTENT
             self._add_key_message(slide, spec, layout)
             self._add_bullets(slide, spec, layout)
+            self._add_takeaway_bar(slide, spec, layout)
 
         self._add_slide_number(slide, spec.slide_number, layout)
         self._add_speaker_notes(slide, spec)
