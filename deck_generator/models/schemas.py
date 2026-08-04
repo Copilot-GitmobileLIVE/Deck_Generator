@@ -102,11 +102,19 @@ class SlideSpec(BaseModel):
     """Full specification for a single slide, produced by ContentAgent.
 
     Each SlideSpec represents one slide in the final deck.  The LLM generates
-    all fields as a JSON array which ContentAgent parses and validates here.
-    SlideSpec objects are then consumed by:
+    all fields as a JSON array; ContentAgent parses and validates each item here.
+
+    Consumed by:
       - VisualAgent     → reads visual_type and visual_description
-      - LayoutAgent     → reads slide_type to pick the right template
-      - SlideRenderer   → reads title, key_message, bullets for text layers
+      - LayoutAgent     → reads slide_type to select the right template
+      - SlideRenderer   → reads title, eyebrow, intro_line, key_message,
+                           bullets, takeaway, and speaker_notes
+
+    ML arteka brand fields (content/agenda slides only):
+      eyebrow     — 2-4 word ALL CAPS theme label rendered above the title
+      intro_line  — one plain sentence below the title before the content zone
+      takeaway    — one "so what" sentence for the full-width navy bar at the bottom
+    Title, closing, and section_divider slides leave these three fields empty.
     """
 
     slide_number: int               # 1-based position in the deck
@@ -135,7 +143,7 @@ class ImageRequest(BaseModel):
 
     slide_number: int               # Ties this request back to its SlideSpec
     visual_type: VisualType         # High-level category (used for logging / analytics)
-    prompt: str = Field(..., description="Detailed 100–200 word image generation prompt")
+    prompt: str = Field(..., description="40-70 word image generation prompt using all 10 required slots")
     style_hints: List[str] = Field(default_factory=list)  # e.g. ["minimal", "dark", "blue"]
     aspect_ratio: str = "16:9"      # "16:9" for full-width, "1:1" for square insets
     preferred_provider: Optional[str] = None  # "openai" | "gemini" | None (compete)
@@ -186,39 +194,45 @@ class SelectedImage(BaseModel):
 
 
 class LayoutSpec(BaseModel):
-    """Complete design blueprint for a single slide produced by LayoutAgent.
+    """Complete design blueprint for a single slide, produced by LayoutAgent.
 
-    All positional values are in inches, measured from the top-left corner of
-    the slide canvas (13.33 × 7.5 inches for 16:9 widescreen).
-
-    The SlideRenderer and ImageRenderer read these values directly when calling
-    python-pptx's `add_textbox()` and `add_picture()` functions, so any change
-    here immediately changes the physical layout of the output PPTX.
+    All positional values are in inches from the top-left corner of the
+    13.33 × 7.5 inch (16:9 widescreen) canvas.  SlideRenderer and ImageRenderer
+    read these values directly when calling python-pptx's add_textbox() and
+    add_picture(), so changing a value here changes the physical output.
 
     Layout templates per SlideType:
-      TITLE          — full-bleed image behind centred text (image covers whole slide)
-      AGENDA         — numbered list on the left, decorative image on the right
-      CONTENT        — split-screen: text left (6 in), image right (6 in)
-      SECTION_DIVIDER— dark background, image fills right half, big title on left
-      CLOSING        — full-bleed branded background, large white call-to-action
+      TITLE           — full-bleed image behind overlaid title (show_brand_header=False)
+      AGENDA          — numbered list left, image right
+      CONTENT         — brand header lockup top-left, bullets below, image right panel
+      SECTION_DIVIDER — dark flat background, image fills right half (show_brand_header=False)
+      CLOSING         — full-bleed dark background + CTA (show_brand_header=False)
+
+    Brand header lockup (show_brand_header=True on CONTENT and AGENDA):
+      SlideRenderer uses eyebrow_top_inches, the hardcoded tick-rule y (0.56"),
+      title_top_inches (0.85"), and intro_top_inches (1.55") to draw the
+      eyebrow → tick rule → title → intro sequence per the brand spec.
     """
 
     slide_number: int
     slide_type: SlideType  # Determines which template was used to produce these numbers
 
-    # ── Image placement (inches from top-left of slide) ─────────────────
+    # ── Image placement (inches from top-left of slide) ──────────────────────
     image_width_inches: float = 5.5
     image_height_inches: float = 4.0
-    image_left_inches: float = 5.8   # Horizontal distance from left edge
-    image_top_inches: float = 1.5    # Vertical distance from top edge
+    image_left_inches: float = 5.8
+    image_top_inches: float = 1.5
 
-    # ── Title text box placement ────────────────────────────────
+    # ── Title text box ────────────────────────────────────────────────────────
+    # On content/agenda slides the title sits at y=0.85" (below eyebrow + tick).
+    # On title/closing slides it sits lower in the image scrim area.
     title_left_inches: float = 0.4
     title_top_inches: float = 0.4
     title_width_inches: float = 5.0
     title_height_inches: float = 1.0
 
-    # ── Body / content text box placement ─────────────────────────
+    # ── Content / body text box ───────────────────────────────────────────────
+    # On content/agenda slides this zone begins at y=2.2" per the brand grid.
     content_left_inches: float = 0.4
     content_top_inches: float = 1.6
     content_width_inches: float = 5.2

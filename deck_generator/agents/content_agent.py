@@ -6,17 +6,29 @@ Responsibility:
     — one per slide — that defines the full narrative arc of the presentation.
 
 How it works:
-    1. Builds a LangChain prompt (system + human messages) that embeds the
-       brief fields as template variables.
-    2. Sends the prompt to GPT-4o via an async LangChain chain.
-    3. Parses the LLM's JSON response into validated SlideSpec objects.
-    4. Returns a state update dict that LangGraph merges into DeckState.
+    1. At init, loads the mlarteka-pptx brand skill and builds a system prompt
+       by prepending a fixed intro to the skill's Fixed Slide Rules, Typography,
+       and Content Rules sections (~12 KB).  This means brand rule changes in
+       the skill file flow through automatically without touching agent code.
+    2. Builds a LangChain prompt (system + human messages) with brief fields
+       as template variables.
+    3. Calls GPT-4o asynchronously via a LangChain chain.
+    4. Parses and validates the LLM's JSON array into SlideSpec objects.
+    5. Returns a state update dict that LangGraph merges into DeckState.
 
 LLM output contract:
-    The LLM is instructed to return a plain JSON array of objects.  Each
-    object matches the SlideSpec schema.  If the model wraps the array in
-    markdown fences or a dict key, _strip_fences() and the dict-unwrap logic
-    handle it gracefully.
+    The LLM returns a JSON array; each item maps to a SlideSpec.  In addition
+    to the core fields (title, bullets, speaker_notes), three ML arteka brand
+    fields are required on every content/agenda slide:
+        eyebrow     — 2-4 word ALL CAPS theme label
+        intro_line  — one framing sentence below the title
+        takeaway    — one "so what" sentence for the bottom navy bar
+    Title/closing/divider slides return empty strings for these three fields.
+
+Null coercion:
+    Some LLM responses return JSON null for optional string fields.  The
+    parsing loop normalises null → "" for all str-typed fields before Pydantic
+    validation so no ValidationError is raised for missing optional content.
 """
 from __future__ import annotations
 

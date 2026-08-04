@@ -2,20 +2,30 @@
 slide_renderer.py — SlideRenderer
 
 Responsibility:
-    Add all text elements (background colour, accent bar, title, key message,
-    bullet points, slide number) to a single python-pptx Slide object using
-    the positioning values from a LayoutSpec.
+    Add every text and shape element to a single python-pptx Slide object
+    using the positioning values from a LayoutSpec.
 
 All measurements use python-pptx's Inches() helper which converts inches to
 English Metric Units (EMU) internally.  Font sizes use Pt() (points).
 
-Rendering order per slide (shapes added top-to-bottom in z-order):
-    1. Background fill        — set on the slide background object (not a shape)
-    2. Accent bar (rectangle) — thin coloured strip at the top
-    3. Title text box
-    4. Subtitle / key message text box
-    5. Bullet points text box
-    6. Slide number text box   — bottom-right corner
+ML arteka brand header lockup (content and agenda slides only):
+    The header lockup runs top-to-bottom at fixed y positions:
+        y 0.26" — Eyebrow   ALL CAPS label (Indigo Grey on light, Orange on dark)
+        y 0.56" — Tick rule  short orange rectangle, 0.77" wide
+        y 0.85" — Title      Bold, 18-20pt, sentence case
+        y 1.55" — Intro line one plain framing sentence, regular weight
+
+Rendering order per slide (shapes added in z-order, back to front):
+    1. Background fill  — applied to slide.background (always behind all shapes)
+    2. Eyebrow text box — brand header lockup; skipped when show_brand_header=False
+    3. Tick rule shape  — orange 0.77" accent rule; skipped with header
+    4. Title text box
+    5. Intro line       — skipped when show_brand_header=False
+    6. Key message / subtitle text box
+    7. Bullet points text box  (one text box; one paragraph per bullet)
+    8. Takeaway bar    — full-width navy bar + centered text; content slides only
+    9. Slide number    — bottom-right; omitted on title and closing slides
+   10. Speaker notes   — written to the notes pane, not visible on the slide
 """
 from __future__ import annotations
 

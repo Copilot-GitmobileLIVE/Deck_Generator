@@ -6,17 +6,26 @@ Responsibility:
     and colour decision needed to render that slide in python-pptx.
 
 Design system:
-    All layouts follow the ML arteka (powered by mobileLIVE) brand system (_ML dict)
-    and a 16:9 widescreen canvas (13.33 × 7.5 inches).
+    All layouts follow the ML arteka brand system defined in _ML and the
+    brand grid from the mlarteka-pptx skill (loaded at init via skill_loader).
+    Canvas: 16:9 widescreen, 13.33 × 7.5 inches.
+
+    Brand grid for content/agenda slides (show_brand_header=True):
+        y 0.26" Eyebrow | y 0.58" Tick rule | y 0.85" Title | y 1.55" Intro
+        y 2.2"–6.2" Content zone | y 6.45" Takeaway bar
 
 This agent is PURE LOGIC — it calls no LLM and makes no API calls.
 Layout decisions are made deterministically based on SlideType alone:
 
-    TITLE          → _title_layout         full-bleed image + overlaid title
-    AGENDA         → _agenda_layout         image right, numbered list left
-    CONTENT        → _content_layout        split: text left, image right
-    SECTION_DIVIDER→ _section_divider_layout dark bg, image right half
-    CLOSING        → _closing_layout         branded full-bleed + CTA
+    TITLE           → _title_layout          full-bleed image + overlaid title
+    AGENDA          → _agenda_layout          image right, numbered list left
+    CONTENT         → _content_layout         text left, image right, brand header
+    SECTION_DIVIDER → _section_divider_layout dark bg, image right half
+    CLOSING         → _closing_layout          dark full-bleed + CTA text
+
+    show_brand_header controls whether SlideRenderer draws the eyebrow/tick/
+    intro lockup.  Title, section_divider, and closing set it to False because
+    those slides use a full-bleed image or flat dark background with no top chrome.
 
 To add a new slide type:
     1. Add an entry to the SlideType enum in schemas.py.
@@ -66,6 +75,9 @@ class LayoutAgent:
     H = 7.5
 
     def __init__(self) -> None:
+        # Load skill to confirm it is present and log its grid section length.
+        # Layout coordinates below are hardcoded from the same spec; they stay
+        # stable across runs and don't need runtime parsing.
         skill = get_brand_skill()
         grid = skill.get_section("Layout Grid")
         logger.info(

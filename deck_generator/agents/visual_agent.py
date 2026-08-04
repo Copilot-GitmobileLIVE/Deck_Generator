@@ -7,14 +7,20 @@ Responsibility:
 
 Key decisions made here:
     - Which visual_type fits each slide (e.g. 'roadmap' vs 'hero_image')
-    - What detailed prompt (100–200 words) describes the desired image
+    - A 40-70 word prompt (10 mandatory slots) describing the desired image
     - Which provider should generate it (OpenAI for photos, Gemini for diagrams)
     - What aspect ratio to use (16:9 full-width vs 1:1 inset)
 
+Prompt quality:
+    The system prompt is assembled at init time from the mlarteka-pptx brand
+    skill's Image Placeholders section, which defines all 10 required prompt
+    slots (subject, setting, people, shot, lens, lighting, mood, text-safe
+    region, quality, negatives).  This keeps prompt conventions in sync with
+    the skill without hardcoding them here.
+
 Cost optimisation:
-    Title, Agenda, and Closing slides are excluded from image generation to
-    save API costs.  These structural slides use brand colour backgrounds
-    instead of custom-generated images.
+    Title, Agenda, and Closing slides are skipped — they use flat brand-colour
+    backgrounds or full-bleed image placeholders handled separately.
 """
 from __future__ import annotations
 
@@ -90,6 +96,7 @@ class VisualAgent:
             "VisualAgent: loaded brand skill from %s (%d chars of image rules)",
             skill.skill_path.name, len(image_rules),
         )
+
     def _strip_fences(self, raw: str) -> str:
         """Strip markdown code fences from LLM output (same pattern as ContentAgent)."""
         raw = raw.strip()

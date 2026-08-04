@@ -2,16 +2,21 @@
 config.py — Central application configuration.
 
 All settings are read from the .env file (or real environment variables) at
-startup via pydantic-settings.  Every agent and provider imports `get_settings()`
-to access keys, model names, and file paths — there is no hard-coded config
-anywhere else in the codebase.
+startup via pydantic-settings.  Every agent, provider, and the API server
+import `get_settings()` to access keys, model names, and file paths.
+There is intentionally no hard-coded config anywhere else in the codebase —
+all tuneable values live here.
 
-How to use:
+Quick-start:
     1. Copy `.env.example` to `.env`.
-    2. Fill in OPENAI_API_KEY and GEMINI_API_KEY.
-    3. Optionally override model names or output paths.
-    4. The singleton is cached via `@lru_cache` so the .env file is only
-       parsed once for the lifetime of the process.
+    2. Fill in OPENAI_API_KEY (required) and GEMINI_API_KEY (optional).
+    3. Override model names, output paths, or skill paths as needed.
+    4. The singleton is cached via @lru_cache so the .env file is only
+       read once for the entire lifetime of the process.
+
+Environment variable mapping (case-insensitive):
+    OPENAI_API_KEY, GEMINI_API_KEY, MODEL_CONTENT, OUTPUT_DIR, …
+    Any key in Settings can be overridden via an env var of the same name.
 """
 from __future__ import annotations
 

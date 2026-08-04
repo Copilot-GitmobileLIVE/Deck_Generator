@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deck Generator — ML arteka</title>
+  <style>
+    /* ── Design tokens (ML arteka brand) ─────────────────────────────────── */
+    :root {
+      --navy:       #0F0F37;
+      --deep-navy:  #090927;
+      --orange:     #E9590C;
+      --peach:      #FEF5EE;
+      --off-white:  #FEFBF8;
+      --body-navy:  #3C3C5E;
+      --caption:    #5C5C78;
+      --indigo:     #434E80;
+      --border:     #C9C9D6;
+      --radius:     6px;
+      --font:       'Nunito Sans', 'Segoe UI', Arial, sans-serif;
+    }
+
+    /* ── Reset & base ────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--peach);
+      color: var(--body-navy);
+      min-height: 100vh;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+    header {
+      background: var(--navy);
+      padding: 1.1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+    }
+    header .logo-mark {
+      width: 36px; height: 36px;
+      background: var(--orange);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    header .logo-mark svg { width: 22px; height: 22px; fill: #fff; }
+    header .logo-text { display: flex; flex-direction: column; }
+    header .logo-text strong {
+      font-size: 1.1rem; font-weight: 800;
+      color: var(--off-white); letter-spacing: 0.01em;
+    }
+    header .logo-text span {
+      font-size: 0.72rem; color: #9F9FB5; letter-spacing: 0.04em;
+    }
+    header nav { margin-left: auto; }
+    header nav a {
+      font-size: 0.8rem; color: #9F9FB5;
+      text-decoration: none; padding: 0.35rem 0.75rem;
+      border: 1px solid #2a2a60; border-radius: var(--radius);
+      transition: border-color .2s, color .2s;
+    }
+    header nav a:hover { color: var(--off-white); border-color: var(--orange); }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    main {
+      max-width: 860px; margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    /* ── Page title ──────────────────────────────────────────────────────── */
+    .page-eyebrow {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+      color: var(--indigo); text-transform: uppercase; margin-bottom: 0.3rem;
+    }
+    .tick { display: block; width: 0.77in; height: 2px; background: var(--orange); margin-bottom: 0.55rem; }
+    h1 { font-size: 1.55rem; font-weight: 800; color: var(--navy); margin-bottom: 0.4rem; }
+    .page-intro { font-size: 0.88rem; color: var(--caption); margin-bottom: 2rem; }
+
+    /* ── Card ────────────────────────────────────────────────────────────── */
+    .card {
+      background: rgba(254,245,238,.55);
+      border: 1.5px solid var(--orange);
+      border-radius: var(--radius);
+      padding: 1.6rem 1.8rem;
+      margin-bottom: 1.4rem;
+    }
+    .card-title {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--indigo);
+      margin-bottom: 1rem; border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    /* ── Form ────────────────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1rem; }
+    .field:last-child { margin-bottom: 0; }
+    label {
+      font-size: 0.78rem; font-weight: 700; color: var(--indigo);
+      letter-spacing: 0.03em;
+    }
+    label .req { color: var(--orange); margin-left: 2px; }
+    input[type="text"], input[type="number"], textarea, select {
+      font-family: var(--font);
+      font-size: 0.875rem;
+      color: var(--body-navy);
+      background: var(--off-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.52rem 0.75rem;
+      width: 100%;
+      transition: border-color .15s;
+      appearance: none;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--orange);
+      box-shadow: 0 0 0 2px rgba(233,89,12,.15);
+    }
+    textarea { resize: vertical; min-height: 78px; line-height: 1.5; }
+    .hint { font-size: 0.72rem; color: var(--caption); }
+
+    /* ── Key messages ────────────────────────────────────────────────────── */
+    #km-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .km-row { display: flex; gap: 0.5rem; align-items: center; }
+    .km-row input { flex: 1; }
+    .km-del {
+      flex-shrink: 0; width: 28px; height: 28px;
+      border: none; background: none; cursor: pointer;
+      color: var(--caption); font-size: 1.1rem; line-height: 1;
+      border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+      transition: color .15s, background .15s;
+    }
+    .km-del:hover { color: var(--orange); background: rgba(233,89,12,.08); }
+    #km-add {
+      font-size: 0.78rem; font-weight: 700; color: var(--orange);
+      background: none; border: 1px solid var(--orange);
+      border-radius: var(--radius); padding: 0.32rem 0.75rem;
+      cursor: pointer; transition: background .15s;
+    }
+    #km-add:hover { background: rgba(233,89,12,.08); }
+
+    /* ── Submit ──────────────────────────────────────────────────────────── */
+    .actions { display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
+    #submit-btn {
+      font-family: var(--font); font-size: 0.9rem; font-weight: 700;
+      background: var(--orange); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 0.65rem 1.8rem; cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    #submit-btn:hover:not(:disabled) { background: #c94900; }
+    #submit-btn:active:not(:disabled) { transform: scale(0.98); }
+    #submit-btn:disabled { background: var(--border); cursor: not-allowed; }
+    #form-error { font-size: 0.8rem; color: #c94900; }
+
+    /* ── Status panel ────────────────────────────────────────────────────── */
+    #status-panel {
+      display: none;
+      background: var(--navy);
+      border-radius: var(--radius);
+      padding: 1.6rem 1.8rem;
+      margin-top: 1.5rem;
+    }
+    #status-panel.visible { display: block; }
+    #status-eyebrow {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #9F9FB5; margin-bottom: 0.6rem;
+    }
+    #status-title {
+      font-size: 1.15rem; font-weight: 800; color: var(--off-white);
+      margin-bottom: 1rem;
+    }
+
+    /* progress bar */
+    .progress-track {
+      height: 4px; background: #1e1e5a; border-radius: 2px;
+      overflow: hidden; margin-bottom: 1rem;
+    }
+    .progress-fill {
+      height: 100%; background: var(--orange); border-radius: 2px;
+      width: 0%; transition: width .4s ease;
+    }
+    .progress-fill.indeterminate {
+      width: 40%; animation: slide 1.5s infinite ease-in-out;
+    }
+    @keyframes slide {
+      0%  { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    #status-msg { font-size: 0.85rem; color: #D8D8E4; margin-bottom: 0.8rem; }
+
+    /* log */
+    #log-list {
+      list-style: none; margin: 0; padding: 0;
+      max-height: 180px; overflow-y: auto;
+    }
+    #log-list li {
+      font-size: 0.75rem; color: #9F9FB5;
+      padding: 0.2rem 0;
+      border-bottom: 1px solid #1e1e5a;
+    }
+    #log-list li::before { content: "›  "; color: var(--orange); }
+
+    /* download */
+    #download-area { margin-top: 1.2rem; }
+    #download-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-family: var(--font); font-size: 0.88rem; font-weight: 700;
+      background: var(--orange); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 0.6rem 1.4rem; cursor: pointer; text-decoration: none;
+      transition: background .15s;
+    }
+    #download-btn:hover { background: #c94900; }
+    #download-btn svg { width: 16px; height: 16px; fill: #fff; }
+
+    /* error state */
+    #error-box {
+      display: none; background: rgba(201,73,0,.12);
+      border: 1px solid #c94900; border-radius: var(--radius);
+      padding: 0.9rem 1.1rem; margin-top: 1rem;
+      font-size: 0.82rem; color: #ffc8a8;
+    }
+    #error-box.visible { display: block; }
+
+    /* ── Footer ──────────────────────────────────────────────────────────── */
+    footer {
+      text-align: center; font-size: 0.72rem; color: var(--caption);
+      padding: 2rem; margin-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
+    @media (max-width: 580px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+  </div>
+  <div class="logo-text">
+    <strong>ML arteka</strong>
+    <span>Powered by mobileLIVE</span>
+  </div>
+  <nav>
+    <a href="http://localhost:8000/docs" target="_blank">API Docs</a>
+  </nav>
+</header>
+
+<main>
+  <p class="page-eyebrow">Deck Generator</p>
+  <span class="tick"></span>
+  <h1>Create a consulting deck</h1>
+  <p class="page-intro">
+    Fill in the brief below and the ML arteka multi-agent pipeline will generate
+    a branded PowerPoint deck for you.
+  </p>
+
+  <form id="brief-form" novalidate>
+
+    <!-- Card 1: Deck identity -->
+    <div class="card">
+      <div class="card-title">Deck identity</div>
+
+      <div class="field">
+        <label for="title">Deck title <span class="req">*</span></label>
+        <input id="title" type="text" placeholder="e.g. AI Strategy Roadmap 2026" required />
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label for="client">Client / company <span class="req">*</span></label>
+          <input id="client" type="text" placeholder="e.g. Rogers Communications" required />
+        </div>
+        <div class="field">
+          <label for="industry">Industry <span class="req">*</span></label>
+          <input id="industry" type="text" placeholder="e.g. Telecom, BFSI, Retail" required />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="audience">Target audience <span class="req">*</span></label>
+        <input id="audience" type="text" placeholder="e.g. C-Suite, IT Leadership, Board" required />
+      </div>
+    </div>
+
+    <!-- Card 2: Objective & messages -->
+    <div class="card">
+      <div class="card-title">Objective &amp; key messages</div>
+
+      <div class="field">
+        <label for="objective">Primary objective <span class="req">*</span></label>
+        <textarea id="objective" rows="2"
+          placeholder="What must this deck achieve? e.g. Secure executive approval for the AI modernisation programme"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Key messages <span class="req">*</span></label>
+        <div id="km-list">
+          <div class="km-row">
+            <input type="text" class="km-input" placeholder="Key insight or message 1" />
+            <button type="button" class="km-del" title="Remove">×</button>
+          </div>
+          <div class="km-row">
+            <input type="text" class="km-input" placeholder="Key insight or message 2" />
+            <button type="button" class="km-del" title="Remove">×</button>
+          </div>
+          <div class="km-row">
+            <input type="text" class="km-input" placeholder="Key insight or message 3" />
+            <button type="button" class="km-del" title="Remove">×</button>
+          </div>
+        </div>
+        <button type="button" id="km-add">+ Add message</button>
+        <span class="hint">3 to 5 messages. Each will be reinforced across every slide.</span>
+      </div>
+    </div>
+
+    <!-- Card 3: Deck settings -->
+    <div class="card">
+      <div class="card-title">Deck settings</div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label for="tone">Tone</label>
+          <select id="tone">
+            <option value="professional" selected>Professional</option>
+            <option value="executive">Executive</option>
+            <option value="technical">Technical</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="slide_count">Target slide count</label>
+          <input id="slide_count" type="number" min="3" max="20" value="10" />
+          <span class="hint">3 – 20 slides</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="brand">Brand system</label>
+        <select id="brand">
+          <option value="mlarteka" selected>ML arteka (default)</option>
+          <option value="mobilelive">mobileLIVE</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="additional_context">Additional context <em style="font-weight:400;color:var(--caption)">(optional)</em></label>
+        <textarea id="additional_context" rows="3"
+          placeholder="Anything else the agent should know: recent data, constraints, competitors, tone nuances…"></textarea>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button type="submit" id="submit-btn">Generate deck</button>
+      <span id="form-error"></span>
+    </div>
+
+  </form>
+
+  <!-- Status / result panel -->
+  <div id="status-panel">
+    <div id="status-eyebrow">Pipeline status</div>
+    <div id="status-title">Generating your deck…</div>
+    <div class="progress-track">
+      <div class="progress-fill indeterminate" id="progress-fill"></div>
+    </div>
+    <div id="status-msg">Starting agents…</div>
+    <ul id="log-list"></ul>
+    <div id="download-area" style="display:none">
+      <a id="download-btn" href="#" download>
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download PPTX
+      </a>
+    </div>
+    <div id="error-box"></div>
+  </div>
+
+</main>
+
+<footer>ML arteka Deck Generator &nbsp;·&nbsp; powered by mobileLIVE &nbsp;·&nbsp; Multi-agent AI pipeline</footer>
+
+<script>
+  // ── Config ─────────────────────────────────────────────────────────────────
+  const API = 'http://localhost:8000';
+  const POLL_MS = 3000;
+
+  // ── Key-message rows ───────────────────────────────────────────────────────
+  const kmList = document.getElementById('km-list');
+
+  function addKmRow(value = '') {
+    const row = document.createElement('div');
+    row.className = 'km-row';
+    row.innerHTML = `
+      <input type="text" class="km-input" placeholder="Key insight or message" value="${value.replace(/"/g,'&quot;')}" />
+      <button type="button" class="km-del" title="Remove">×</button>
+    `;
+    row.querySelector('.km-del').addEventListener('click', () => {
+      if (kmList.children.length > 1) row.remove();
+    });
+    kmList.appendChild(row);
+  }
+
+  document.getElementById('km-add').addEventListener('click', () => {
+    if (kmList.children.length < 5) addKmRow();
+  });
+
+  // Wire existing delete buttons
+  kmList.querySelectorAll('.km-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (kmList.children.length > 1) btn.closest('.km-row').remove();
+    });
+  });
+
+  // ── Form validation helper ─────────────────────────────────────────────────
+  function getKeyMessages() {
+    return [...kmList.querySelectorAll('.km-input')]
+      .map(i => i.value.trim()).filter(Boolean);
+  }
+
+  function showFormError(msg) {
+    document.getElementById('form-error').textContent = msg;
+  }
+
+  // ── Status panel helpers ───────────────────────────────────────────────────
+  const panel      = document.getElementById('status-panel');
+  const statusTitle = document.getElementById('status-title');
+  const statusMsg  = document.getElementById('status-msg');
+  const logList    = document.getElementById('log-list');
+  const progressFill = document.getElementById('progress-fill');
+  const downloadArea = document.getElementById('download-area');
+  const downloadBtn  = document.getElementById('download-btn');
+  const errorBox     = document.getElementById('error-box');
+
+  function showPanel() { panel.classList.add('visible'); }
+
+  function setRunning(msg) {
+    statusTitle.textContent = 'Generating your deck…';
+    statusMsg.textContent = msg;
+    progressFill.classList.add('indeterminate');
+    progressFill.style.width = '';
+    downloadArea.style.display = 'none';
+    errorBox.classList.remove('visible');
+  }
+
+  function setComplete(job) {
+    statusTitle.textContent = `Deck ready — ${job.slide_count} slides`;
+    statusMsg.textContent = `Finished in ${job.elapsed_seconds}s`;
+    progressFill.classList.remove('indeterminate');
+    progressFill.style.width = '100%';
+    downloadArea.style.display = 'block';
+    downloadBtn.href = API + job.download_url;
+    downloadBtn.setAttribute('download', job.download_url.split('/').pop());
+    document.getElementById('submit-btn').disabled = false;
+  }
+
+  function setFailed(msg) {
+    statusTitle.textContent = 'Pipeline failed';
+    progressFill.classList.remove('indeterminate');
+    progressFill.style.width = '0%';
+    statusMsg.textContent = '';
+    errorBox.textContent = 'Error: ' + msg;
+    errorBox.classList.add('visible');
+    document.getElementById('submit-btn').disabled = false;
+  }
+
+  function appendLog(entries, prevCount) {
+    const newEntries = entries.slice(prevCount);
+    newEntries.forEach(e => {
+      const li = document.createElement('li');
+      li.textContent = e;
+      logList.appendChild(li);
+    });
+    if (newEntries.length) logList.scrollTop = logList.scrollHeight;
+    return entries.length;
+  }
+
+  // ── Poll job status ────────────────────────────────────────────────────────
+  async function pollJob(jobId) {
+    let prevLogCount = 0;
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/api/jobs/${jobId}`);
+        const job = await res.json();
+        prevLogCount = appendLog(job.execution_logs || [], prevLogCount);
+
+        if (job.status === 'running') {
+          setRunning('Agents are working…');
+        } else if (job.status === 'complete') {
+          clearInterval(intervalId);
+          setComplete(job);
+        } else if (job.status === 'failed') {
+          clearInterval(intervalId);
+          setFailed(job.error || 'Unknown error');
+        }
+      } catch (err) {
+        setRunning('Waiting for server…');
+      }
+    }, POLL_MS);
+  }
+
+  // ── Form submit ────────────────────────────────────────────────────────────
+  document.getElementById('brief-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showFormError('');
+
+    const title    = document.getElementById('title').value.trim();
+    const client   = document.getElementById('client').value.trim();
+    const industry = document.getElementById('industry').value.trim();
+    const audience = document.getElementById('audience').value.trim();
+    const objective = document.getElementById('objective').value.trim();
+    const keyMessages = getKeyMessages();
+    const tone     = document.getElementById('tone').value;
+    const slideCount = parseInt(document.getElementById('slide_count').value, 10) || 10;
+    const brand    = document.getElementById('brand').value;
+    const additionalContext = document.getElementById('additional_context').value.trim() || null;
+
+    // Validate
+    if (!title || !client || !industry || !audience || !objective) {
+      showFormError('Please fill in all required fields.');
+      return;
+    }
+    if (keyMessages.length < 1) {
+      showFormError('Add at least one key message.');
+      return;
+    }
+
+    const payload = {
+      title, client, industry, audience, objective,
+      key_messages: keyMessages,
+      tone,
+      slide_count_target: slideCount,
+      brand,
+      additional_context: additionalContext,
+    };
+
+    // Submit
+    document.getElementById('submit-btn').disabled = true;
+    logList.innerHTML = '';
+    showPanel();
+    setRunning('Submitting brief…');
+
+    try {
+      const res = await fetch(`${API}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        setFailed(err.detail || 'Server error');
+        return;
+      }
+
+      const { job_id } = await res.json();
+      setRunning('Pipeline started…');
+      pollJob(job_id);
+
+    } catch (err) {
+      setFailed('Could not reach the server. Is it running? (python start_server.py)');
+    }
+  });
+</script>
+</body>
+</html>
