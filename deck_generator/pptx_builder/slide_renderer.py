@@ -390,6 +390,8 @@ class SlideRenderer:
                 run.font.color.rgb = _rgb("#5C5C78")
                 run.font.name = layout.font_family
 
+        self._add_stat_context_strip(slide, spec, layout)
+
     # ── Dense consulting helpers ──────────────────────────────────────────────
 
     def _set_cell_text(
@@ -653,84 +655,521 @@ class SlideRenderer:
         line.fill.fore_color.rgb = _rgb(layout.accent_color)
         line.line.width = 0
 
-    def _add_dense_content(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
-        """Dense consulting layout: left analysis zone (table + bullets) + right executive panel."""
+    def _fill_left_gap(self, slide: Slide, spec: SlideSpec, start_y: float, layout: LayoutSpec) -> None:
+        """Fill unused left-zone space with supporting context drawn from intro_line / takeaway."""
+        avail = _DC_BOTTOM - start_y - 0.05
+        if avail < 0.45:
+            return
+        sep = slide.shapes.add_shape(
+            MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+            Inches(_DC_LEFT_X), Inches(start_y), Inches(_DC_LEFT_W), Inches(0.02),
+        )
+        sep.fill.solid()
+        sep.fill.fore_color.rgb = _rgb("#D5CCC4")
+        sep.line.width = 0
+        start_y += 0.07
+        avail  -= 0.07
+        lbl = slide.shapes.add_textbox(
+            Inches(_DC_LEFT_X), Inches(start_y), Inches(_DC_LEFT_W), Inches(0.22),
+        )
+        tf = lbl.text_frame
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = "SUPPORTING CONTEXT"
+        run.font.bold = True
+        run.font.size = Pt(7.5)
+        run.font.color.rgb = _rgb(layout.accent_color)
+        run.font.name = layout.font_family
+        start_y += 0.25
+        avail  -= 0.25
+        if avail < 0.18:
+            return
+        lines = []
+        if spec.intro_line:
+            lines.append((f"\u25b8  {spec.intro_line}", False))
+        if spec.takeaway and spec.takeaway != spec.key_message:
+            lines.append((f"\u25b8  {spec.takeaway}", True))
+        if lines:
+            box = slide.shapes.add_textbox(
+                Inches(_DC_LEFT_X), Inches(start_y), Inches(_DC_LEFT_W), Inches(avail),
+            )
+            tf = box.text_frame
+            tf.word_wrap = True
+            for i, (text, bold) in enumerate(lines[:3]):
+                para = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+                run = para.add_run()
+                run.text = text
+                run.font.size = Pt(9)
+                run.font.bold = bold
+                run.font.color.rgb = _rgb(layout.body_color)
+                run.font.name = layout.font_family
+                para.space_after = Pt(5)
+
+    def _fill_right_gap(self, slide: Slide, spec: SlideSpec, start_y: float, layout: LayoutSpec) -> None:
+        """Fill unused right-panel space with a warm section-objective box."""
+        avail = _DC_BOTTOM - start_y - 0.05
+        if avail < 0.45:
+            return
+        bg = slide.shapes.add_shape(
+            MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+            Inches(_DC_RIGHT_X), Inches(start_y), Inches(_DC_RIGHT_W), Inches(avail),
+        )
+        bg.fill.solid()
+        bg.fill.fore_color.rgb = _rgb("#F5EDE5")
+        bg.line.color.rgb = _rgb("#D5CCC4")
+        bg.line.width = Pt(0.5)
+        bar = slide.shapes.add_shape(
+            MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+            Inches(_DC_RIGHT_X), Inches(start_y), Inches(0.05), Inches(avail),
+        )
+        bar.fill.solid()
+        bar.fill.fore_color.rgb = _rgb(layout.accent_color)
+        bar.line.width = 0
+        lbl = slide.shapes.add_textbox(
+            Inches(_DC_RIGHT_X + 0.12), Inches(start_y + 0.08),
+            Inches(_DC_RIGHT_W - 0.17), Inches(0.22),
+        )
+        tf = lbl.text_frame
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = "SECTION OBJECTIVE"
+        run.font.bold = True
+        run.font.size = Pt(7.5)
+        run.font.color.rgb = _rgb(layout.accent_color)
+        run.font.name = layout.font_family
+        text = spec.intro_line or spec.key_message or ""
+        if text and avail > 0.5:
+            content = slide.shapes.add_textbox(
+                Inches(_DC_RIGHT_X + 0.12), Inches(start_y + 0.32),
+                Inches(_DC_RIGHT_W - 0.17), Inches(avail - 0.38),
+            )
+            tf = content.text_frame
+            tf.word_wrap = True
+            p = tf.paragraphs[0]
+            run = p.add_run()
+            run.text = text
+            run.font.size = Pt(8.5)
+            run.font.color.rgb = _rgb(layout.body_color)
+            run.font.name = layout.font_family
+
+    def _add_stat_context_strip(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
+        """Narrow context strip below stat boxes, filling the gap before the takeaway bar."""
+        text = spec.intro_line or spec.key_message or ""
+        if not text:
+            return
+        strip_y, strip_h = 5.90, 0.42
+        bg = slide.shapes.add_shape(
+            MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+            Inches(0.5), Inches(strip_y), Inches(12.33), Inches(strip_h),
+        )
+        bg.fill.solid()
+        bg.fill.fore_color.rgb = _rgb("#F0E8DF")
+        bg.line.color.rgb = _rgb(layout.accent_color)
+        bg.line.width = Pt(0.5)
+        lbl = slide.shapes.add_textbox(
+            Inches(0.62), Inches(strip_y + 0.07), Inches(1.4), Inches(strip_h - 0.14),
+        )
+        tf = lbl.text_frame
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = "CONTEXT"
+        run.font.bold = True
+        run.font.size = Pt(7.5)
+        run.font.color.rgb = _rgb(layout.accent_color)
+        run.font.name = layout.font_family
+        sep = slide.shapes.add_shape(
+            MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+            Inches(2.12), Inches(strip_y + 0.08), Inches(0.02), Inches(strip_h - 0.16),
+        )
+        sep.fill.solid()
+        sep.fill.fore_color.rgb = _rgb(layout.accent_color)
+        sep.line.width = 0
+        txt = slide.shapes.add_textbox(
+            Inches(2.26), Inches(strip_y + 0.07), Inches(10.45), Inches(strip_h - 0.14),
+        )
+        tf = txt.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = text
+        run.font.size = Pt(9)
+        run.font.color.rgb = _rgb(layout.body_color)
+        run.font.name = layout.font_family
+
+    def _detect_dense_pattern(self, bullets: list) -> str:
+        """Return which visual pattern the bullet encoding requests."""
+        for b in bullets:
+            s = str(b).strip().upper()
+            if s.startswith("COL1:") or s.startswith("COL1_ITEM:"):
+                return "three_column"
+            if s.startswith("COMPARE_LEFT:") or s.startswith("BEFORE:"):
+                return "two_column"
+            if s.startswith("STEP:"):
+                return "process_steps"
+        return "standard"
+
+    def _render_two_column(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
+        """Before/After or Current/Target two-column comparison layout."""
+        left_hdr, right_hdr = "CURRENT STATE", "TARGET STATE"
+        rows: list = []
+        kpis: list = []
+        insight: dict = {}
+        regular: list = []
+        for b in spec.bullets:
+            s = str(b).strip(); u = s.upper()
+            if u.startswith("COMPARE_LEFT:") or u.startswith("BEFORE:"):
+                left_hdr = s.split(":", 1)[1].strip().upper()
+            elif u.startswith("COMPARE_RIGHT:") or u.startswith("AFTER:"):
+                right_hdr = s.split(":", 1)[1].strip().upper()
+            elif u.startswith("COMPARE_ROW:"):
+                parts = s[12:].split("|", 1)
+                rows.append((parts[0].strip(), parts[1].strip() if len(parts) > 1 else ""))
+            elif u.startswith("KPI:"):
+                kpis.append([p.strip() for p in s[4:].split("|")])
+            elif u.startswith("INSIGHT:"):
+                inner = s[8:].strip(); halves = inner.split("|", 1)
+                insight = {"type": halves[0].strip(), "text": halves[1].strip() if len(halves) > 1 else inner}
+            elif s and not u.startswith("TABLE:") and not u.startswith("ROW:"):
+                regular.append(s)
+        if not rows and regular:
+            mid = (len(regular) + 1) // 2
+            rows = [(regular[i], regular[i + mid] if i + mid < len(regular) else "") for i in range(mid)]
+
+        lx = 0.50; full_w = 12.33
+        col_w = (full_w - 0.50) / 2  # 5.915"
+        rx = lx + col_w + 0.50
+        y = _DC_TOP
+
+        if spec.key_message:
+            km = slide.shapes.add_textbox(Inches(lx), Inches(y), Inches(full_w), Inches(0.35))
+            tf = km.text_frame; tf.word_wrap = True
+            p = tf.paragraphs[0]; run = p.add_run()
+            run.text = f"\u258c  {spec.key_message}"
+            run.font.bold = True; run.font.size = Pt(9.5)
+            run.font.color.rgb = _rgb(layout.title_color); run.font.name = layout.font_family
+            y += 0.42
+
+        insight_h = 0.68 if (insight or spec.takeaway) else 0.0
+        col_h = _DC_BOTTOM - y - insight_h - 0.10
+
+        for ci, (cx, hdr_bg, hdr_acc, hdr_text) in enumerate([
+            (lx,  "#0F0F37", layout.accent_color, left_hdr),
+            (rx,  "#0C3320", "#34C97A",            right_hdr),
+        ]):
+            hdr = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+                Inches(cx), Inches(y), Inches(col_w), Inches(0.38))
+            hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb(hdr_bg); hdr.line.width = 0
+            ht = slide.shapes.add_textbox(
+                Inches(cx + 0.12), Inches(y + 0.06), Inches(col_w - 0.24), Inches(0.28))
+            tf = ht.text_frame; p = tf.paragraphs[0]; run = p.add_run()
+            run.text = hdr_text; run.font.bold = True; run.font.size = Pt(9)
+            run.font.color.rgb = _rgb(hdr_acc); run.font.name = layout.font_family
+
+            row_y = y + 0.42
+            # expand rows to fill the full column height — no empty space below last row
+            row_h = (col_h - 0.42) / max(len(rows), 1)
+            for ri, pair in enumerate(rows[:12]):
+                val = pair[ci] if ci < len(pair) else ""
+                rb = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+                    Inches(cx), Inches(row_y), Inches(col_w), Inches(row_h))
+                rb.fill.solid()
+                rb.fill.fore_color.rgb = _rgb("#F7F0E8" if ri % 2 == 0 else "#FFFFFF")
+                rb.line.width = 0
+                if val:
+                    tb = slide.shapes.add_textbox(
+                        Inches(cx + 0.10), Inches(row_y + 0.04), Inches(col_w - 0.20), Inches(row_h - 0.08))
+                    tf = tb.text_frame; tf.word_wrap = True
+                    p = tf.paragraphs[0]; run = p.add_run()
+                    run.text = val; run.font.size = Pt(9)
+                    run.font.color.rgb = _rgb(layout.body_color); run.font.name = layout.font_family
+                row_y += row_h
+
+        if insight_h > 0:
+            eff = insight if insight else {"type": "Key Takeaway", "text": spec.takeaway or spec.key_message or ""}
+            strip_y = y + col_h + 0.05
+            avail = _DC_BOTTOM - strip_y - 0.02
+            if eff.get("text") and avail > 0.30:
+                self._add_executive_callout(slide, eff, lx, strip_y, full_w, avail, layout)
+
+    def _render_three_column(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
+        """Three-pillar framework: three equal columns with colored headers and bullet content."""
+        cols = [{"header": f"PILLAR {i+1}", "items": []} for i in range(3)]
+        insight: dict = {}; regular: list = []
+        for b in spec.bullets:
+            s = str(b).strip(); u = s[:14].upper()
+            if   u.startswith("COL1:"):      cols[0]["header"] = s[5:].strip().upper()
+            elif u.startswith("COL2:"):      cols[1]["header"] = s[5:].strip().upper()
+            elif u.startswith("COL3:"):      cols[2]["header"] = s[5:].strip().upper()
+            elif u.startswith("COL1_ITEM:"): cols[0]["items"].append(s[10:].strip())
+            elif u.startswith("COL2_ITEM:"): cols[1]["items"].append(s[10:].strip())
+            elif u.startswith("COL3_ITEM:"): cols[2]["items"].append(s[10:].strip())
+            elif u.startswith("INSIGHT:"):
+                inner = s[8:].strip(); halves = inner.split("|", 1)
+                insight = {"type": halves[0].strip(), "text": halves[1].strip() if len(halves) > 1 else inner}
+            elif s and not u.startswith("KPI:") and not u.startswith("TABLE:") and not u.startswith("ROW:"):
+                regular.append(s)
+        if all(not c["items"] for c in cols) and regular:
+            per = max(1, (len(regular) + 2) // 3)
+            for i, item in enumerate(regular):
+                cols[min(i // per, 2)]["items"].append(item)
+
+        lx = 0.50; full_w = 12.33; gap = 0.35; n = 3
+        col_w = (full_w - (n - 1) * gap) / n
+        y = _DC_TOP
+
+        if spec.key_message:
+            km = slide.shapes.add_textbox(Inches(lx), Inches(y), Inches(full_w), Inches(0.35))
+            tf = km.text_frame; tf.word_wrap = True
+            p = tf.paragraphs[0]; run = p.add_run()
+            run.text = f"\u258c  {spec.key_message}"
+            run.font.bold = True; run.font.size = Pt(9.5)
+            run.font.color.rgb = _rgb(layout.title_color); run.font.name = layout.font_family
+            y += 0.42
+
+        insight_h = 0.68 if insight else 0.0
+        col_area_h = _DC_BOTTOM - y - insight_h - 0.10
+        hdr_bgs  = [layout.title_color, "#1A4A7A", "#0A3320"]
+        hdr_accs = [layout.accent_color, "#4DA6FF", "#34C97A"]
+
+        for ci, col in enumerate(cols):
+            cx = lx + ci * (col_w + gap)
+            hb = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+                Inches(cx), Inches(y), Inches(col_w), Inches(0.40))
+            hb.fill.solid(); hb.fill.fore_color.rgb = _rgb(hdr_bgs[ci]); hb.line.width = 0
+            st = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+                Inches(cx), Inches(y), Inches(col_w), Inches(0.06))
+            st.fill.solid(); st.fill.fore_color.rgb = _rgb(hdr_accs[ci]); st.line.width = 0
+            ht = slide.shapes.add_textbox(
+                Inches(cx + 0.10), Inches(y + 0.08), Inches(col_w - 0.20), Inches(0.32))
+            tf = ht.text_frame; p = tf.paragraphs[0]; run = p.add_run()
+            run.text = col["header"]; run.font.bold = True; run.font.size = Pt(9)
+            run.font.color.rgb = _rgb("#FEFBF8"); run.font.name = layout.font_family
+            body = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+                Inches(cx), Inches(y + 0.40), Inches(col_w), Inches(col_area_h - 0.40))
+            body.fill.solid(); body.fill.fore_color.rgb = _rgb("#FAFAF8")
+            body.line.color.rgb = _rgb("#D5CCC4"); body.line.width = Pt(0.5)
+            # Items: distribute vertically with even spacing; reserve bottom for footer
+            n_items = len(col["items"][:8])
+            body_avail = col_area_h - 0.48
+            footer_budget = 0.52 if body_avail > max(n_items * 0.30 + 0.55, 1.0) else 0.0
+            items_budget = body_avail - footer_budget
+            extra_h = max(0.0, items_budget - n_items * 0.22)
+            even_spacing = Pt(max(5, min(30, extra_h * 72 / max(n_items, 1))))
+            ib = slide.shapes.add_textbox(
+                Inches(cx + 0.12), Inches(y + 0.48), Inches(col_w - 0.24), Inches(items_budget))
+            tf = ib.text_frame; tf.word_wrap = True
+            for ii, item in enumerate(col["items"][:8]):
+                para = tf.paragraphs[0] if ii == 0 else tf.add_paragraph()
+                run = para.add_run()
+                run.text = f"\u25ba  {item}"
+                run.font.size = Pt(9); run.font.color.rgb = _rgb(layout.body_color)
+                run.font.name = layout.font_family; para.space_after = even_spacing
+            # Column footer: supplementary context to fill remaining space
+            if footer_budget >= 0.45:
+                fy = y + 0.48 + items_budget
+                fsep = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+                    Inches(cx + 0.08), Inches(fy), Inches(col_w - 0.16), Inches(0.02))
+                fsep.fill.solid(); fsep.fill.fore_color.rgb = _rgb(hdr_accs[ci]); fsep.line.width = 0
+                flbl = slide.shapes.add_textbox(
+                    Inches(cx + 0.10), Inches(fy + 0.05), Inches(col_w - 0.20), Inches(0.20))
+                tf = flbl.text_frame; p = tf.paragraphs[0]; run = p.add_run()
+                run.text = ["KEY INSIGHT", "SUPPORTING CONTEXT", "KEY IMPLICATION"][ci % 3]
+                run.font.bold = True; run.font.size = Pt(7.5)
+                run.font.color.rgb = _rgb(hdr_accs[ci]); run.font.name = layout.font_family
+                ftext = ([spec.takeaway, spec.intro_line, spec.key_message][ci % 3] or "")[:130]
+                if ftext and footer_budget > 0.48:
+                    ftxt = slide.shapes.add_textbox(
+                        Inches(cx + 0.10), Inches(fy + 0.27),
+                        Inches(col_w - 0.20), Inches(footer_budget - 0.30))
+                    tf = ftxt.text_frame; tf.word_wrap = True
+                    p = tf.paragraphs[0]; run = p.add_run(); run.text = ftext
+                    run.font.size = Pt(8); run.font.color.rgb = _rgb(layout.body_color)
+                    run.font.name = layout.font_family
+
+        if insight:
+            sy = y + col_area_h + 0.05
+            avail = _DC_BOTTOM - sy - 0.02
+            if avail > 0.30:
+                self._add_executive_callout(slide, insight, lx, sy, full_w, avail, layout)
+
+    def _render_process_steps(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
+        """Horizontal numbered process-step boxes with arrows between them."""
+        steps: list = []; kpis: list = []; insight: dict = {}; regular: list = []
+        for b in spec.bullets:
+            s = str(b).strip(); u = s[:10].upper()
+            if u.startswith("STEP:"):
+                parts = s[5:].split("|")
+                steps.append({"num": parts[0].strip(), "name": parts[1].strip() if len(parts)>1 else "",
+                               "desc": parts[2].strip() if len(parts)>2 else ""})
+            elif u.startswith("KPI:"):
+                kpis.append([p.strip() for p in s[4:].split("|")])
+            elif u.startswith("INSIGHT:"):
+                inner = s[8:].strip(); halves = inner.split("|", 1)
+                insight = {"type": halves[0].strip(), "text": halves[1].strip() if len(halves)>1 else inner}
+            elif s:
+                regular.append(s)
+        if not steps and regular:
+            steps = [{"num": str(i+1), "name": f"Step {i+1}", "desc": r} for i, r in enumerate(regular[:5])]
+
+        lx = 0.50; full_w = 12.33; n = max(len(steps), 1); gap = 0.30
+        box_w = (full_w - (n - 1) * gap) / n
+        y = _DC_TOP
+
+        if spec.key_message:
+            km = slide.shapes.add_textbox(Inches(lx), Inches(y), Inches(full_w), Inches(0.35))
+            tf = km.text_frame; tf.word_wrap = True
+            p = tf.paragraphs[0]; run = p.add_run()
+            run.text = f"\u258c  {spec.key_message}"
+            run.font.bold = True; run.font.size = Pt(9.5)
+            run.font.color.rgb = _rgb(layout.title_color); run.font.name = layout.font_family
+            y += 0.42
+
+        bottom_h = 0.68 if (insight or kpis) else 0.0
+        box_h = _DC_BOTTOM - y - bottom_h - 0.12
+
+        for si, step in enumerate(steps[:5]):
+            bx = lx + si * (box_w + gap)
+            bg = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+                Inches(bx), Inches(y), Inches(box_w), Inches(box_h))
+            bg.fill.solid(); bg.fill.fore_color.rgb = _rgb("#FAFAF8")
+            bg.line.color.rgb = _rgb("#D5CCC4"); bg.line.width = Pt(0.75)
+            ac = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+                Inches(bx), Inches(y), Inches(box_w), Inches(0.06))
+            ac.fill.solid(); ac.fill.fore_color.rgb = _rgb(layout.accent_color); ac.line.width = 0
+            nb = slide.shapes.add_textbox(
+                Inches(bx + 0.10), Inches(y + 0.08), Inches(box_w - 0.20), Inches(0.55))
+            tf = nb.text_frame; p = tf.paragraphs[0]; p.alignment = PP_ALIGN.CENTER
+            run = p.add_run(); run.text = step["num"]
+            run.font.bold = True; run.font.size = Pt(22)
+            run.font.color.rgb = _rgb(layout.accent_color); run.font.name = layout.font_family
+            if step["name"]:
+                nmb = slide.shapes.add_textbox(
+                    Inches(bx + 0.10), Inches(y + 0.66), Inches(box_w - 0.20), Inches(0.40))
+                tf = nmb.text_frame; tf.word_wrap = True
+                p = tf.paragraphs[0]; p.alignment = PP_ALIGN.CENTER
+                run = p.add_run(); run.text = step["name"]
+                run.font.bold = True; run.font.size = Pt(9.5)
+                run.font.color.rgb = _rgb(layout.title_color); run.font.name = layout.font_family
+            if step["desc"]:
+                # Reserve 0.44" at bottom for gate footer (only when box is tall enough)
+                gate_budget = 0.44 if box_h > 1.72 else 0.0
+                db = slide.shapes.add_textbox(
+                    Inches(bx + 0.10), Inches(y + 1.12), Inches(box_w - 0.20), Inches(box_h - 1.22 - gate_budget))
+                tf = db.text_frame; tf.word_wrap = True
+                p = tf.paragraphs[0]; run = p.add_run(); run.text = step["desc"]
+                run.font.size = Pt(9); run.font.color.rgb = _rgb("#5C5C78"); run.font.name = layout.font_family
+            else:
+                gate_budget = 0.44 if box_h > 1.72 else 0.0
+            # Gate criteria footer inside every step box
+            if box_h > 1.72:
+                gy = y + box_h - 0.42
+                gsep = slide.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE,
+                    Inches(bx + 0.08), Inches(gy), Inches(box_w - 0.16), Inches(0.02))
+                gsep.fill.solid(); gsep.fill.fore_color.rgb = _rgb("#D5CCC4"); gsep.line.width = 0
+                glbl = slide.shapes.add_textbox(
+                    Inches(bx + 0.10), Inches(gy + 0.04), Inches(box_w - 0.20), Inches(0.16))
+                tf = glbl.text_frame; p = tf.paragraphs[0]; run = p.add_run()
+                run.text = "GATE CRITERIA"; run.font.bold = True; run.font.size = Pt(6.5)
+                run.font.color.rgb = _rgb(layout.accent_color); run.font.name = layout.font_family
+                criteria = ((step["desc"].split(".")[0] + ".") if step["desc"] else step["name"])[:65]
+                if criteria:
+                    gval = slide.shapes.add_textbox(
+                        Inches(bx + 0.10), Inches(gy + 0.22), Inches(box_w - 0.20), Inches(0.17))
+                    tf = gval.text_frame; p = tf.paragraphs[0]; run = p.add_run()
+                    run.text = criteria; run.font.size = Pt(7.5)
+                    run.font.color.rgb = _rgb("#5C5C78"); run.font.name = layout.font_family
+            if si < len(steps) - 1:
+                ab = slide.shapes.add_textbox(
+                    Inches(bx + box_w), Inches(y + box_h / 2 - 0.15), Inches(gap), Inches(0.30))
+                tf = ab.text_frame; p = tf.paragraphs[0]; p.alignment = PP_ALIGN.CENTER
+                run = p.add_run(); run.text = "\u2192"
+                run.font.bold = True; run.font.size = Pt(14)
+                run.font.color.rgb = _rgb(layout.accent_color); run.font.name = layout.font_family
+
+        if bottom_h > 0:
+            sy = y + box_h + 0.06; avail = _DC_BOTTOM - sy - 0.02
+            eff = insight if insight else {"type": "Key Takeaway", "text": spec.takeaway or spec.key_message or ""}
+            if kpis and eff.get("text"):
+                ins_w = full_w * 0.54
+                self._add_executive_callout(slide, eff, lx, sy, ins_w, avail, layout)
+                kx = lx + ins_w + 0.10; kw = full_w - ins_w - 0.10
+                card_w = (kw - (len(kpis[:3]) - 1) * 0.08) / max(len(kpis[:3]), 1)
+                for ki, kp in enumerate(kpis[:3]):
+                    self._add_kpi_mini_card(slide, kp, kx + ki * (card_w + 0.08), sy, card_w, layout)
+            elif eff.get("text") and avail > 0.30:
+                self._add_executive_callout(slide, eff, lx, sy, full_w, avail, layout)
+
+    def _render_standard_dense(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
+        """Standard dense consulting: left analysis zone + right executive panel + KPI cards."""
         table_headers, table_rows, kpis, insight, regular = self._parse_bullets_for_dense(spec.bullets)
 
         self._add_vertical_divider(slide, _DC_DIV_X, _DC_TOP, _DC_BOTTOM, layout)
 
-        # ── LEFT ZONE ──────────────────────────────────────────────────────────
         left_y = _DC_TOP
-
         if spec.key_message:
             km_box = slide.shapes.add_textbox(
-                Inches(_DC_LEFT_X), Inches(left_y), Inches(_DC_LEFT_W), Inches(0.36),
-            )
-            tf = km_box.text_frame
-            tf.word_wrap = True
-            p = tf.paragraphs[0]
-            run = p.add_run()
+                Inches(_DC_LEFT_X), Inches(left_y), Inches(_DC_LEFT_W), Inches(0.36))
+            tf = km_box.text_frame; tf.word_wrap = True
+            p = tf.paragraphs[0]; run = p.add_run()
             run.text = f"\u258c  {spec.key_message}"
-            run.font.bold = True
-            run.font.size = Pt(9.5)
-            run.font.color.rgb = _rgb(layout.title_color)
-            run.font.name = layout.font_family
+            run.font.bold = True; run.font.size = Pt(9.5)
+            run.font.color.rgb = _rgb(layout.title_color); run.font.name = layout.font_family
             left_y += 0.40
 
         if table_headers and table_rows:
             lbl = slide.shapes.add_textbox(
-                Inches(_DC_LEFT_X), Inches(left_y), Inches(_DC_LEFT_W), Inches(0.22),
-            )
-            tf = lbl.text_frame
-            p = tf.paragraphs[0]
-            run = p.add_run()
-            run.text = "ANALYSIS"
-            run.font.bold = True
-            run.font.size = Pt(7.5)
-            run.font.color.rgb = _rgb(layout.accent_color)
-            run.font.name = layout.font_family
+                Inches(_DC_LEFT_X), Inches(left_y), Inches(_DC_LEFT_W), Inches(0.22))
+            tf = lbl.text_frame; p = tf.paragraphs[0]; run = p.add_run()
+            run.text = "ANALYSIS"; run.font.bold = True; run.font.size = Pt(7.5)
+            run.font.color.rgb = _rgb(layout.accent_color); run.font.name = layout.font_family
             left_y += 0.23
             available = _DC_BOTTOM - left_y - 0.05
-            table_h = min(available, (len(table_rows) + 1) * 0.31)
-            self._add_native_table(
-                slide, table_headers, table_rows,
-                _DC_LEFT_X, left_y, _DC_LEFT_W, table_h, layout,
-            )
-            left_y += table_h + 0.15
+            n_rows = len(table_rows)
+            natural_h  = (n_rows + 1) * 0.31
+            expanded_h = min(available * 0.78, (n_rows + 1) * 0.52)
+            table_h = min(available - 0.05, max(natural_h, expanded_h))
+            self._add_native_table(slide, table_headers, table_rows,
+                                   _DC_LEFT_X, left_y, _DC_LEFT_W, table_h, layout)
+            left_y += table_h + 0.10
 
         if regular and left_y < _DC_BOTTOM - 0.4:
+            est_h = min(len(regular[:6]) * 0.28, _DC_BOTTOM - left_y - 0.1)
             bul_box = slide.shapes.add_textbox(
-                Inches(_DC_LEFT_X), Inches(left_y),
-                Inches(_DC_LEFT_W), Inches(_DC_BOTTOM - left_y - 0.05),
-            )
-            tf = bul_box.text_frame
-            tf.word_wrap = True
+                Inches(_DC_LEFT_X), Inches(left_y), Inches(_DC_LEFT_W), Inches(est_h))
+            tf = bul_box.text_frame; tf.word_wrap = True
             for i, bullet in enumerate(regular[:6]):
                 para = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
                 run = para.add_run()
-                run.text = f"\u25b8  {bullet}"
-                run.font.size = Pt(9.5)
-                run.font.color.rgb = _rgb(layout.body_color)
-                run.font.name = layout.font_family
+                run.text = f"\u25b8  {bullet}"; run.font.size = Pt(9.5)
+                run.font.color.rgb = _rgb(layout.body_color); run.font.name = layout.font_family
                 para.space_after = Pt(4)
+            left_y += est_h + 0.08
 
-        # ── RIGHT PANEL ─────────────────────────────────────────────────────────
+        self._fill_left_gap(slide, spec, left_y, layout)
+
         right_y = _DC_TOP
-        effective_insight = insight if insight else {
-            "type": "Executive Insight",
-            "text": spec.key_message or "",
-        }
+        effective_insight = insight if insight else {"type": "Executive Insight", "text": spec.key_message or ""}
         if effective_insight.get("text"):
             callout_h = min(1.78, (_DC_BOTTOM - _DC_TOP) * 0.43)
             right_y = self._add_executive_callout(
-                slide, effective_insight,
-                _DC_RIGHT_X, right_y, _DC_RIGHT_W, callout_h, layout,
-            )
+                slide, effective_insight, _DC_RIGHT_X, right_y, _DC_RIGHT_W, callout_h, layout)
         for kpi_parts in kpis[:3]:
             if right_y + 0.70 <= _DC_BOTTOM + 0.05:
                 right_y = self._add_kpi_mini_card(
-                    slide, kpi_parts, _DC_RIGHT_X, right_y, _DC_RIGHT_W, layout,
-                )
+                    slide, kpi_parts, _DC_RIGHT_X, right_y, _DC_RIGHT_W, layout)
+        self._fill_right_gap(slide, spec, right_y, layout)
+
+    def _add_dense_content(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
+        """Route to the correct dense pattern based on bullet-prefix encoding."""
+        pattern = self._detect_dense_pattern(spec.bullets)
+        if pattern == "two_column":
+            self._render_two_column(slide, spec, layout)
+        elif pattern == "three_column":
+            self._render_three_column(slide, spec, layout)
+        elif pattern == "process_steps":
+            self._render_process_steps(slide, spec, layout)
+        else:
+            self._render_standard_dense(slide, spec, layout)
 
     def _add_insight_strip(self, slide: Slide, spec: SlideSpec, layout: LayoutSpec) -> None:
         """Narrow 'Key Insight' bar rendered below the diagram on visual_dominant slides."""

@@ -118,11 +118,39 @@ RULE 7 — CHART AND VISUAL PRIORITY (for visual_dominant slides):
   Every chart/diagram must include an insight statement: what the data concludes, not just what it shows.
   visual_description must name every cell value, color encoding, row/column header, and the main insight node.
 
-DENSE_CONSULTING ENCODING (mandatory for layout_variant="dense_consulting"):
-  Minimum 7 bullets per dense_consulting slide (TABLE + 4 ROW + 2 KPI + 1 INSIGHT):
-  TABLE + ROW entries: see RULE 5 formats above.
-  KPI entries: "KPI: VALUE | Label (2-4 words) | context (≤12 words)"
-  INSIGHT entry: "INSIGHT: Type | Two actionable sentences."
+DENSE_CONSULTING ENCODING — select the best pattern for the content type:
+
+PATTERN A — Standard table + right panel (default for analysis, scorecards, risk assessments):
+  "TABLE: Col1 | Col2 | Col3 | Col4"       — table header
+  "ROW: val1 | val2 | val3 | val4"          — data row (4-8 rows)
+  "KPI: VALUE | Label | context"            — right-panel KPI card (2-3)
+  "INSIGHT: Type | Two actionable sentences." — MANDATORY
+
+PATTERN B — Two-column comparison (before/after, current/target, problem/solution, gap analysis):
+  "COMPARE_LEFT: Current State"             — left column header (ALL CAPS label)
+  "COMPARE_RIGHT: Target State"             — right column header
+  "COMPARE_ROW: current item | target item" — one row per comparison (4-8 rows)
+  "INSIGHT: Type | Two actionable sentences." — MANDATORY
+  USE FOR: gap analysis, transformation comparisons, problem vs solution, risk vs control.
+
+PATTERN C — Three-column framework (pillars, capabilities, strategic domains):
+  "COL1: Catalog"                           — column 1 header
+  "COL1_ITEM: Register all 40+ agents"      — bullet for column 1 (3-6 items)
+  "COL2: Evaluate"                          — column 2 header
+  "COL2_ITEM: Score on 5 quality dimensions"— bullet for column 2
+  "COL3: Govern"                            — column 3 header
+  "COL3_ITEM: Policy enforcement"           — bullet for column 3
+  "INSIGHT: Type | Two actionable sentences." — MANDATORY
+  USE FOR: operating models, governance pillars, capability frameworks, strategic priorities.
+
+PATTERN D — Horizontal process steps (lifecycle, workflow, stage-gate, evaluation sequence):
+  "STEP: 1 | Register | Agent submits metadata via registration API" — (repeat 4-5 steps)
+  "STEP: 2 | Evaluate | LLM-as-Judge scores 5 quality dimensions"
+  "KPI: VALUE | Label | context"            — optional (0-3 KPI cards below steps)
+  "INSIGHT: Type | Two actionable sentences." — MANDATORY
+  USE FOR: agent lifecycle, evaluation workflow, governance process, implementation stages.
+
+CHOOSE THE RIGHT PATTERN: vary patterns deliberately across slides — never use the same pattern more than twice in a row. Alternate between table-based analysis (Pattern A), comparison (Pattern B), framework (Pattern C), and process (Pattern D) to create visual rhythm across the deck.
 
 STAT_BAND ENCODING (for layout_variant="stat_band"):
   Exactly 4 bullets: "VALUE | LABEL | CONTEXT" (VALUE = metric, LABEL = 2-4 word name, CONTEXT = 1 sentence).
@@ -175,16 +203,17 @@ Return a JSON ARRAY of slide objects. Each object must have exactly these keys:
   key_message        — one crisp sentence summarising this slide's single insight
   bullets            — array of strings:
                        stat_band: EXACTLY 4 strings: "VALUE | LABEL | CONTEXT"
-                       dense_consulting: MINIMUM 7 entries using these prefixes (at least TABLE+4 ROW+2 KPI+INSIGHT):
-                         "TABLE: Col1 | Col2 | Col3 | Col4"   — table header (1 per slide)
-                         "ROW: val1 | val2 | val3 | val4"     — data row (4-8 ROW entries)
-                         "KPI: VALUE | Label | context"       — right-panel KPI card (2-3 per slide)
-                           Example: "KPI: 85% | Agents Ungoverned | No pre-deployment validation exists"
-                         "INSIGHT: Type | Two clear sentences." — executive callout (1 MANDATORY per slide)
-                           Types: Business Impact | Executive Insight | Why It Matters | Key Risk | Success Criteria
-                           Example: "INSIGHT: Business Impact | Centralized evaluation cuts rework by 60%. Rogers scales AI with measurable quality."
-                       visual_dominant: empty array [] (diagram carries the full insight)
-                       all other fallback: max 4 plain bullets each ≤20 words
+                       dense_consulting — choose one of four patterns (vary across the deck):
+                         Pattern A (standard table): TABLE: + ROW: + KPI: + INSIGHT: prefixes
+                         Pattern B (two-column comparison):
+                           "COMPARE_LEFT: label" + "COMPARE_RIGHT: label" + "COMPARE_ROW: left | right" (4-8 rows) + "INSIGHT: Type | text"
+                         Pattern C (three-column framework):
+                           "COL1: Header" + "COL1_ITEM: bullet" (×3-6) + "COL2: ..." + "COL3: ..." + "INSIGHT: Type | text"
+                         Pattern D (horizontal process steps):
+                           "STEP: 1 | Stage | Description" (×4-5) + "KPI: ..." (0-3) + "INSIGHT: Type | text"
+                         MANDATORY on every dense_consulting slide: one "INSIGHT: Type | text" bullet
+                       visual_dominant: empty array [] (diagram carries the insight)
+                       all other fallback: max 4 plain text bullets each ≤20 words
   speaker_notes      — 2-6 sentences for the presenter
   layout_variant     — REQUIRED for content slides:
                        "visual_dominant": diagram fills full slide; Key Insight strip added below image.
