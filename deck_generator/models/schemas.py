@@ -129,6 +129,7 @@ class SlideSpec(BaseModel):
     speaker_notes: str = ""         # Presenter guidance — not shown on screen
     visual_type: Optional[VisualType] = None   # Hints to VisualAgent which visual category fits
     visual_description: str = ""    # Detailed description of what the image should literally show
+    layout_variant: str = "split"   # Layout hint: "split" | "visual_dominant" | "content_heavy"
 
 
 class ImageRequest(BaseModel):
@@ -255,6 +256,7 @@ class LayoutSpec(BaseModel):
     takeaway_top_inches: float = 6.45   # Full-width bottom takeaway bar
     takeaway_height_inches: float = 0.55
     show_brand_header: bool = True      # False on title/closing (full-bleed image slides)
+    visual_dominant: bool = False       # True: image fills full content zone; skip bullet/key_message text
 
     # ── Typography ────────────────────────────────────────────
     title_font_size: int = 20      # Points (18-20pt for content slides)

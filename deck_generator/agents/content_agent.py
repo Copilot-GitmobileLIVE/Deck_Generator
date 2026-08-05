@@ -47,17 +47,107 @@ from deck_generator.utils.timing import timer
 logger = logging.getLogger("deck_generator.content_agent")
 
 # Static preamble; authoritative brand rules are appended from the skill at init time.
-_SYSTEM_BASE = """You are a senior management consultant and presentation strategist at ML arteka (powered by mobileLIVE).
+_SYSTEM_BASE = """You are a senior management consultant and presentation strategist at ML arteka (powered by mobileLIVE), with deep expertise in McKinsey, Bain, and BCG-style executive decks.
 
-Your task: create a professional, executive-quality slide outline following the ML arteka brand system.
+Your task: create a professional, executive-quality slide outline following the ML arteka brand system with the density, structure, and visual richness of a strategic consulting deck.
 
 Narrative structure: Problem → Insight → Recommendation → Value → Action
-Slide sequencing: Title (dark) → Exec summary → Section dividers (dark) → Content → Recommendation → Closing (dark, CTA).
+Slide sequencing: Title (dark) → Exec summary/Agenda → Section dividers (dark) → Content slides → Closing (dark, CTA).
+
+MASTER CONSULTING RULES — override any conflicting instruction:
+
+RULE 1 — ONE MESSAGE PER SLIDE (absolute):
+- Every slide communicates EXACTLY ONE key message. The headline IS the takeaway.
+- Headline formula: [Conclusion]. [Reason.] — the headline must state what the audience should now believe.
+  ✓ "Traditional QA Cannot Assess Agentic Systems"
+  ✓ "Governance Is the Primary Constraint to AI Adoption"
+  ✓ "Rigor Must Scale With Autonomy"
+  ✗ FORBIDDEN generic titles: Overview, Details, Introduction, Background, Summary, Information, Analysis, Approach, Update
+- Every title must pass: "Does this headline tell the audience what to believe or do?"
+
+RULE 2 — MANDATORY NARRATIVE SEQUENCE (follow this exact deck order):
+  1. Executive Summary — the ONE message leadership must leave with
+  2. The Problem — why current approaches fail (quantified, specific)
+  3. Gap Analysis — specific gaps with evidence and risk consequence
+  4. Framework — the governing solution architecture (operating model or capability map)
+  5. Methodology — how evaluation works (process, criteria, scoring rubric)
+  6. Governance — oversight hierarchy, policies, accountability, RACI
+  7. Roadmap — phased delivery with milestones, owners, and success measures
+  8. Operating Model — how it scales in production (team, process, tooling)
+  9. Key Takeaways — three leadership actions with accountability
+  Progress every section as: Why problem exists → What framework solves it → How it operates → How it scales.
+
+RULE 3 — CONTENT DENSITY (5-15 data points per slide):
+- Every content slide must contain 5-15 meaningful data points: metrics, thresholds, owners, risk ratings, percentages.
+- PROHIBITED: generic bullets ("Improve governance", "Reduce risk", "Increase efficiency").
+- REQUIRED: specific facts ("reduce rework from 3 weeks to 3 days"), ownership ("Rogers AI Platform Team"), thresholds ("≥7.5/10 quality score"), risk ratings ("High if below 6.0").
+- Every framework must include a PRINCIPLES row: Risk-Driven | Automation-First | Governance-Centric | Continuous Evaluation.
+- Every section divider must contain: section number + conclusion-led title + one-sentence summary of the section's primary finding.
+
+RULE 4 — LAYOUT PRIORITY ORDER (choose the first that fits the content):
+  1. Actionable assessment matrix: criteria × dimensions × ownership × threshold × risk (use TABLE/ROW)
+  2. RACI chart: activity × stakeholder role (R/A/C/I) (use TABLE/ROW with single-letter values)
+  3. Maturity model: 5-level horizontal progression, current/target state marked (use TABLE/ROW)
+  4. Stage-gate process flow: 4-5 gates with criteria, owner, outcome (use TABLE/ROW or visual_dominant + process_diagram)
+  5. 3-column framework with PRINCIPLES row: Pillar | Approach | Principle (use TABLE/ROW)
+  6. Assessment scorecard: dimension × metric × score × threshold × status × owner (use TABLE/ROW)
+  7. 2-column before/after or problem/solution comparison (use TABLE/ROW)
+  8. KPI stat band (4 large metrics as stat_band layout)
+  NEVER use plain bullet lists unless the content structurally cannot become any of the above.
+
+RULE 5 — ACTIONABLE TABLE FORMAT (every TABLE must include Owner and Risk/Status):
+  Standard actionable table (evaluation, governance, risk, compliance slides):
+    "TABLE: Dimension | Objective | Metric | Threshold | Owner | Risk"
+    "ROW: Accuracy | Measure correctness | GPT-4o score | ≥7.5/10 | AI Platform | High if <6.0"
+  RACI chart format:
+    "TABLE: Activity | AI Dev Team | Platform Eng | Risk & Compliance | Executive"
+    "ROW: Agent Registration | R | A | C | I"  (use single letters: R=Responsible A=Accountable C=Consulted I=Informed)
+  Maturity model format:
+    "TABLE: Capability | Level 1: Initial | Level 2: Managed | Level 3: Defined | Level 4: Quantified | Level 5: Optimising"
+    "ROW: Agent Visibility | No catalog | Partial lists | Registry live | Real-time inventory | Predictive"
+
+RULE 6 — MANDATORY INSIGHT BOX (every content slide):
+  Every dense_consulting slide must include exactly one INSIGHT bullet:
+  "INSIGHT: [Panel Type] | [Actionable sentence]. [Business consequence.]"
+  - BAD: "INSIGHT: Business Impact | Evaluation is important for quality."
+  - GOOD: "INSIGHT: Key Risk | Deploying without evaluation exposes Rogers to 3× compliance risk. 40% of unvalidated agents may face decommissioning."
+  Panel types: Business Impact | Executive Insight | Why It Matters | Key Risk | Success Criteria | Executive Recommendation
+
+RULE 7 — CHART AND VISUAL PRIORITY (for visual_dominant slides):
+  Preferred formats in order: assessment matrix → RACI chart → heatmap → maturity model → stage-gate → process flow → roadmap → 3-layer architecture.
+  Every chart/diagram must include an insight statement: what the data concludes, not just what it shows.
+  visual_description must name every cell value, color encoding, row/column header, and the main insight node.
+
+DENSE_CONSULTING ENCODING (mandatory for layout_variant="dense_consulting"):
+  Minimum 7 bullets per dense_consulting slide (TABLE + 4 ROW + 2 KPI + 1 INSIGHT):
+  TABLE + ROW entries: see RULE 5 formats above.
+  KPI entries: "KPI: VALUE | Label (2-4 words) | context (≤12 words)"
+  INSIGHT entry: "INSIGHT: Type | Two actionable sentences."
+
+STAT_BAND ENCODING (for layout_variant="stat_band"):
+  Exactly 4 bullets: "VALUE | LABEL | CONTEXT" (VALUE = metric, LABEL = 2-4 word name, CONTEXT = 1 sentence).
+
+CHOOSE layout_variant:
+  "visual_dominant": diagram/process IS the content — architecture, maturity model, RACI visual, roadmap.
+  "dense_consulting": DEFAULT for all analysis, comparison, scorecard, framework, and evidence slides.
+  "stat_band": executive KPI overview slides with 4 large metrics only.
+  "split" and "content_heavy" are DEPRECATED — remap to "dense_consulting".
 
 CRITICAL BRAND RULES (always follow):
-- Titles are action titles in sentence case: one idea, no Title Case, no ALL CAPS.
-- Every content/agenda slide must have an EYEBROW (2-4 ALL CAPS words), INTRO_LINE (one framing sentence), and TAKEAWAY (one "so what" sentence for the bottom bar).
-- No scaffolding on the slide face: caveats, citations, and hedges go in speaker_notes only.
+- Titles use the conclusion-led headline formula: [Conclusion]. [Reason.] — sentence case, one idea.
+- Every content/agenda slide must have: EYEBROW (2-4 ALL CAPS section label), INTRO_LINE (one framing sentence), TAKEAWAY (one "so what" sentence). Never leave these empty.
+- No hedges or scaffolding on the slide face — caveats go in speaker_notes only.
+- Eyebrow labels anchor each slide to its section (e.g. "GOVERNANCE FRAMEWORK", "EVALUATION METHODOLOGY", "GAP ANALYSIS").
+
+VISUAL STORYTELLING RULES (always follow):
+- Visuals are mandatory narrative elements on every content slide.
+- Every visual must support a decision, risk, outcome, or recommendation — never decorative.
+- visual_description must name every entity, metric, relationship, colour encoding, and emphasis node. Minimum 5 sentences for visual_dominant slides.
+- Every chart must lead to an insight statement embedded in visual_description (e.g. "The orange-highlighted node shows that 40% of agents fall below the governance threshold").
+- McKinsey/BCG diagram standards: dense labels on all nodes, all arrows labeled, all metrics explicit, zero empty areas, consulting colour palette.
+- RACI charts: R=dark-red fill, A=orange fill, C=navy fill, I=grey fill. All cells legible.
+- Maturity models: 5 columns (Initial→Managed→Defined→Quantified→Optimising), current-state column orange-outlined, target-state column dark-orange filled.
+- Heatmaps: 5-level colour scale (green→yellow→orange→red→dark-red), all cells labeled with value and interpretation.
 
 The authoritative ML arteka brand guidelines follow. Apply every rule below exactly:
 """
@@ -79,16 +169,38 @@ Return a JSON ARRAY of slide objects. Each object must have exactly these keys:
   slide_type         — one of: title, agenda, content, section_divider, closing
   title              — action title, sentence case, one idea (no Topic Case)
   subtitle           — string or null (used only on title and closing slides)
-  eyebrow            — 2-4 words ALL CAPS theme label for content/agenda slides; empty string "" for title/closing/section_divider
-  intro_line         — one plain sentence below the title for content/agenda slides; empty string "" for title/closing/section_divider
+  eyebrow            — 2-4 words ALL CAPS section label for content/agenda slides; empty string "" for title/closing/section_divider
+  intro_line         — one plain framing sentence below the title for content/agenda slides; empty string "" for title/closing/section_divider
   takeaway           — one bold "so what" sentence for the bottom bar on content slides; empty string "" for title/closing/section_divider/agenda
   key_message        — one crisp sentence summarising this slide's single insight
-  bullets            — array of strings (max 5, each ≤15 words, insight-driven not descriptive)
-  speaker_notes      — 2-6 sentences for the presenter; include any image prompt here for dark/image slides
+  bullets            — array of strings:
+                       stat_band: EXACTLY 4 strings: "VALUE | LABEL | CONTEXT"
+                       dense_consulting: MINIMUM 7 entries using these prefixes (at least TABLE+4 ROW+2 KPI+INSIGHT):
+                         "TABLE: Col1 | Col2 | Col3 | Col4"   — table header (1 per slide)
+                         "ROW: val1 | val2 | val3 | val4"     — data row (4-8 ROW entries)
+                         "KPI: VALUE | Label | context"       — right-panel KPI card (2-3 per slide)
+                           Example: "KPI: 85% | Agents Ungoverned | No pre-deployment validation exists"
+                         "INSIGHT: Type | Two clear sentences." — executive callout (1 MANDATORY per slide)
+                           Types: Business Impact | Executive Insight | Why It Matters | Key Risk | Success Criteria
+                           Example: "INSIGHT: Business Impact | Centralized evaluation cuts rework by 60%. Rogers scales AI with measurable quality."
+                       visual_dominant: empty array [] (diagram carries the full insight)
+                       all other fallback: max 4 plain bullets each ≤20 words
+  speaker_notes      — 2-6 sentences for the presenter
+  layout_variant     — REQUIRED for content slides:
+                       "visual_dominant": diagram fills full slide; Key Insight strip added below image.
+                         USE FOR: architecture diagrams, process flows, roadmaps, timelines, frameworks, governance models, maturity models, operating models.
+                       "dense_consulting": DEFAULT for all other content slides. Two-zone layout with no image.
+                         LEFT 60%: analysis table + evidence bullets. RIGHT 38%: executive callout + KPI cards.
+                         REQUIRES structured bullet encoding (TABLE/ROW/KPI/INSIGHT prefixes — see bullets above).
+                       "stat_band": KPI/metrics overview. 4 large stat boxes. No image.
+                       "" for title/agenda/section_divider/closing.
   visual_type        — one of: hero_image, infographic, process_diagram, architecture_diagram,
                        comparison_table, timeline, roadmap, statistics_visual,
-                       executive_illustration, or null
-  visual_description — what the visual should literally show (1-3 sentences), null for title/closing
+                       executive_illustration — REQUIRED for content/section_divider slides; null only for title/agenda/closing
+  visual_description — REQUIRED for content and section_divider slides.
+                       visual_dominant (5-7 sentences): every node label, stage, layer, metric, arrow, colour. Dense McKinsey-style brief.
+                       dense_consulting / stat_band (2-3 sentences): describe the thematic context for the slide.
+                       null only for title/agenda/closing slides.
 
 IMPORTANT: Return ONLY valid JSON. No markdown code fences. No surrounding text.
 """
@@ -196,10 +308,134 @@ class ContentAgent:
                 for key in ("visual_type", "subtitle"):
                     if item.get(key) == "null":
                         item[key] = None
+                # Normalise LLM-invented visual_type values to the valid VisualType enum.
+                _VALID_VISUAL_TYPES = {
+                    "hero_image", "infographic", "process_diagram",
+                    "architecture_diagram", "comparison_table", "timeline",
+                    "roadmap", "statistics_visual", "executive_illustration",
+                }
+                _VISUAL_TYPE_MAP = {
+                    # RACI / governance
+                    "raci chart":             "comparison_table",
+                    "raci":                   "comparison_table",
+                    "raci_chart":             "comparison_table",
+                    "governance chart":       "architecture_diagram",
+                    "governance model":       "architecture_diagram",
+                    "governance framework":   "architecture_diagram",
+                    "accountability matrix":  "comparison_table",
+                    # Maturity
+                    "maturity model":         "infographic",
+                    "maturity_model":         "infographic",
+                    "maturity matrix":        "infographic",
+                    "capability map":         "infographic",
+                    "capability matrix":      "infographic",
+                    # Heatmap / matrix
+                    "heatmap":                "infographic",
+                    "heat map":               "infographic",
+                    "risk matrix":            "comparison_table",
+                    "assessment matrix":      "comparison_table",
+                    "scorecard":              "statistics_visual",
+                    "assessment scorecard":   "statistics_visual",
+                    # Process / flow
+                    "stage gate":             "process_diagram",
+                    "stage-gate":             "process_diagram",
+                    "lifecycle":              "process_diagram",
+                    "flow chart":             "process_diagram",
+                    "flowchart":              "process_diagram",
+                    "swim lane":              "process_diagram",
+                    "swim_lane":              "process_diagram",
+                    "operating model":        "architecture_diagram",
+                    # Timeline aliases
+                    "gantt":                  "timeline",
+                    "gantt chart":            "timeline",
+                    "milestone chart":        "timeline",
+                    # General fallbacks
+                    "diagram":                "architecture_diagram",
+                    "chart":                  "infographic",
+                    "table":                  "comparison_table",
+                    "matrix":                 "comparison_table",
+                    "framework":              "infographic",
+                    "illustration":           "executive_illustration",
+                    "photo":                  "hero_image",
+                    "image":                  "hero_image",
+                }
+                raw_vt = item.get("visual_type")
+                if raw_vt is not None and str(raw_vt).lower() not in _VALID_VISUAL_TYPES:
+                    normalised = _VISUAL_TYPE_MAP.get(str(raw_vt).lower().strip())
+                    if normalised:
+                        logger.warning(
+                            "ContentAgent: normalised visual_type '%s' → '%s'", raw_vt, normalised,
+                        )
+                        item["visual_type"] = normalised
+                    else:
+                        logger.warning(
+                            "ContentAgent: unknown visual_type '%s' — setting None", raw_vt,
+                        )
+                        item["visual_type"] = None
+                # Normalise LLM-invented slide_type values to the valid enum set.
+                _SLIDE_TYPE_MAP = {
+                    "recommendation": "content",
+                    "value": "content",
+                    "action": "closing",
+                    "insight": "content",
+                    "problem": "content",
+                    "divider": "section_divider",
+                    "section": "section_divider",
+                    "cover": "title",
+                    "intro": "title",
+                    "summary": "content",
+                    "conclusion": "closing",
+                }
+                if item.get("slide_type") not in (
+                    "title", "agenda", "content", "section_divider", "closing"
+                ):
+                    raw_type = str(item.get("slide_type", "")).lower().strip()
+                    item["slide_type"] = _SLIDE_TYPE_MAP.get(raw_type, "content")
+                    logger.warning(
+                        "ContentAgent: normalised unknown slide_type '%s' → '%s'",
+                        raw_type, item["slide_type"],
+                )
+                # Normalise layout_variant to the valid set
+                _VARIANT_ALIASES = {
+                    "visual_dominant": "visual_dominant",
+                    "full_visual": "visual_dominant",
+                    "diagram_dominant": "visual_dominant",
+                    "image_dominant": "visual_dominant",
+                    "visual": "visual_dominant",
+                    "full": "visual_dominant",
+                    "content_heavy": "content_heavy",
+                    "text_heavy": "content_heavy",
+                    "text_led": "content_heavy",
+                    "split": "split",
+                    "balanced": "split",
+                    "default": "split",
+                    "stat_band": "stat_band",
+                    "stats": "stat_band",
+                    "kpi_band": "stat_band",
+                    "kpi": "stat_band",
+                    "metrics_band": "stat_band",
+                    "statistics": "stat_band",
+                    "dense_consulting": "dense_consulting",
+                    "dense": "dense_consulting",
+                    "consulting": "dense_consulting",
+                    "two_zone": "dense_consulting",
+                    "structured": "dense_consulting",
+                    "split": "dense_consulting",    # redirect deprecated split → dense
+                    "balanced": "dense_consulting",
+                    "content_heavy": "dense_consulting",  # redirect deprecated
+                    "text_heavy": "dense_consulting",
+                    "text_led": "dense_consulting",
+                    "default": "dense_consulting",
+                }
+                lv = str(item.get("layout_variant") or "split").lower().strip()
+                item["layout_variant"] = _VARIANT_ALIASES.get(lv, "split")
                 # Ensure new brand fields default to empty string if absent
                 for key in ("eyebrow", "intro_line", "takeaway", "visual_description", "speaker_notes"):
-                    if item.get(key) is None or item.get(key) == "null":
+                    val = item.get(key)
+                    if val is None or val == "null":
                         item[key] = ""
+                    elif isinstance(val, list):
+                        item[key] = " ".join(str(v) for v in val)
             # Validate each item against the SlideSpec Pydantic model.
             slides: List[SlideSpec] = [SlideSpec(**s) for s in data]
         except Exception as exc:

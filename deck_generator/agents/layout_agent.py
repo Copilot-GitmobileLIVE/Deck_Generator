@@ -190,11 +190,117 @@ class LayoutAgent:
             show_brand_header=True,
         )
 
+    def _content_visual_dominant_layout(self, n: int) -> LayoutSpec:
+        """Image fills the full content zone. Title and takeaway bar frame the diagram."""
+        return LayoutSpec(
+            slide_number=n,
+            slide_type=SlideType.CONTENT,
+            # Image spans the full content zone (x 0.5–12.83, y 2.2–6.2)
+            image_width_inches=12.33,
+            image_height_inches=3.5,   # reduced to make room for insight strip at y≈5.78"
+            image_left_inches=0.5,
+            image_top_inches=2.2,
+            # Title: same brand-header position as standard content layout
+            title_left_inches=0.5,
+            title_top_inches=0.85,
+            title_width_inches=10.7,
+            title_height_inches=0.72,
+            # Content zone coordinates present but text rendering is skipped (visual_dominant=True)
+            content_left_inches=0.5,
+            content_top_inches=2.2,
+            content_width_inches=12.33,
+            content_height_inches=3.5,
+            background_color=_ML["bg_light"],
+            title_color=_ML["title_light"],
+            body_color=_ML["body_light"],
+            accent_color=_ML["accent"],
+            header_bar_color=_ML["accent"],
+            eyebrow_color=_ML["eyebrow_light"],
+            intro_color=_ML["intro_light"],
+            takeaway_bg_color=_ML["takeaway_bg"],
+            takeaway_text_color=_ML["takeaway_text"],
+            title_font_size=20,
+            subtitle_font_size=11,
+            body_font_size=11,
+            font_family="Nunito Sans",
+            show_brand_header=True,
+            visual_dominant=True,
+        )
+
+    def _dense_consulting_layout(self, n: int) -> LayoutSpec:
+        """Full-width two-zone layout: left table/bullets + right executive panel. No image."""
+        return LayoutSpec(
+            slide_number=n,
+            slide_type=SlideType.CONTENT,
+            image_width_inches=0.0,
+            image_height_inches=0.0,
+            image_left_inches=0.0,
+            image_top_inches=0.0,
+            title_left_inches=0.5,
+            title_top_inches=0.85,
+            title_width_inches=12.33,
+            title_height_inches=0.72,
+            content_left_inches=0.5,
+            content_top_inches=2.05,
+            content_width_inches=12.33,
+            content_height_inches=4.23,
+            background_color=_ML["bg_light"],
+            title_color=_ML["title_light"],
+            body_color=_ML["body_light"],
+            accent_color=_ML["accent"],
+            header_bar_color=_ML["accent"],
+            eyebrow_color=_ML["eyebrow_light"],
+            intro_color=_ML["intro_light"],
+            takeaway_bg_color=_ML["takeaway_bg"],
+            takeaway_text_color=_ML["takeaway_text"],
+            title_font_size=20,
+            subtitle_font_size=11,
+            body_font_size=11,
+            font_family="Nunito Sans",
+            show_brand_header=True,
+        )
+
+    def _stat_band_layout(self, n: int) -> LayoutSpec:
+        """Full-width KPI stat-box layout. No image; stat boxes rendered natively."""
+        return LayoutSpec(
+            slide_number=n,
+            slide_type=SlideType.CONTENT,
+            # No image for stat_band — set zero dimensions so ImageRenderer skips it
+            image_width_inches=0.0,
+            image_height_inches=0.0,
+            image_left_inches=0.0,
+            image_top_inches=0.0,
+            # Brand header identical to standard content layout
+            title_left_inches=0.5,
+            title_top_inches=0.85,
+            title_width_inches=12.33,
+            title_height_inches=0.72,
+            # Content zone: y 2.2 to 6.2, full width (stat boxes rendered natively)
+            content_left_inches=0.5,
+            content_top_inches=2.2,
+            content_width_inches=12.33,
+            content_height_inches=4.0,
+            background_color=_ML["bg_light"],
+            title_color=_ML["title_light"],
+            body_color=_ML["body_light"],
+            accent_color=_ML["accent"],
+            header_bar_color=_ML["accent"],
+            eyebrow_color=_ML["eyebrow_light"],
+            intro_color=_ML["intro_light"],
+            takeaway_bg_color=_ML["takeaway_bg"],
+            takeaway_text_color=_ML["takeaway_text"],
+            title_font_size=20,
+            subtitle_font_size=11,
+            body_font_size=11,
+            font_family="Nunito Sans",
+            show_brand_header=True,
+        )
+
     def _section_divider_layout(self, n: int) -> LayoutSpec:
         return LayoutSpec(
             slide_number=n,
             slide_type=SlideType.SECTION_DIVIDER,
-            # Full-height image on the right half (photographic placeholder, navy scrim)
+            # Full-height narrative image on the right half, with navy scrim for text legibility
             image_width_inches=6.0,
             image_height_inches=self.H,
             image_left_inches=7.33,
@@ -283,8 +389,19 @@ class LayoutAgent:
 
         specs: List[LayoutSpec] = []
         for slide in state.slides:
-            builder = dispatch.get(slide.slide_type, self._content_layout)
-            specs.append(builder(slide.slide_number))
+            # visual_dominant overrides the default content layout when the diagram fills the slide.
+            if (slide.slide_type == SlideType.CONTENT
+                    and getattr(slide, "layout_variant", "split") == "visual_dominant"):
+                specs.append(self._content_visual_dominant_layout(slide.slide_number))
+            elif (slide.slide_type == SlideType.CONTENT
+                    and getattr(slide, "layout_variant", "split") == "stat_band"):
+                specs.append(self._stat_band_layout(slide.slide_number))
+            elif (slide.slide_type == SlideType.CONTENT
+                    and getattr(slide, "layout_variant", "split") == "dense_consulting"):
+                specs.append(self._dense_consulting_layout(slide.slide_number))
+            else:
+                builder = dispatch.get(slide.slide_type, self._content_layout)
+                specs.append(builder(slide.slide_number))
 
         log_entry = f"LayoutAgent: {len(specs)} layout specs built (brand: mlarteka-pptx)"
         logger.info(log_entry)

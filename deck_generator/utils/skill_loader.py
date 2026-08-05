@@ -73,8 +73,8 @@ class BrandSkill:
         ))
 
     def image_prompt_rules(self) -> str:
-        """Return the image-prompt convention block for injection into VisualAgent."""
-        return self._escape_braces(self.get_section("Image Placeholders"))
+        """Return the visual storytelling and image-prompt convention block for injection into VisualAgent."""
+        return self._escape_braces(self.get_section("Visual Storytelling"))
 
     def color_palette_text(self) -> str:
         """Return the raw color palette section for reference (unescaped)."""

@@ -51,6 +51,8 @@ class ImageRenderer:
         if not Path(image_path).exists():
             logger.warning("ImageRenderer: file not found — %s", image_path)
             return
+        if layout.image_width_inches <= 0 or layout.image_height_inches <= 0:
+            return  # stat_band and other image-free layouts
 
         try:
             # add_picture(image_file, left, top, width, height)
