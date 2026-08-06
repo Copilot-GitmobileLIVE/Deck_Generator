@@ -1,0 +1,18 @@
+{
+  "title": "Governing AI at Scale: Rogers' Enterprise AI Evaluation and Governance System",
+  "client": "Rogers Communications",
+  "industry": "Telecom",
+  "audience": "Executive leadership, enterprise architecture, and technology strategy team",
+  "objective": "Secure executive sponsorship and investment for a centralized AI Agent Governance, Evaluation, and Monitoring Platform that eliminates agent sprawl, enforces quality standards, and enables responsible AI scaling across Rogers Communications.",
+  "key_messages": [
+    "Rogers has deployed AI agents across business units with zero centralized oversight — creating compounding risk in quality, compliance, security, and cost",
+    "A centralized AI Governance and Evaluation Platform is the foundational capability Rogers needs to validate, catalog, and monitor every agent before and after deployment",
+    "A five-dimension evaluation scorecard (accuracy, relevance, reliability, safety, performance) creates a universal quality standard applicable to every agent type",
+    "A three-tier governance hierarchy — strategic, operational, and technical — defines accountability, policy enforcement, and audit controls at every level",
+    "A phased 12-month implementation roadmap delivers measurable ROI: reduced duplication, faster validation, improved compliance posture, and lower operational risk"
+  ],
+  "tone": "executive",
+  "slide_count_target": 20,
+  "brand": "mobilelive",
+  "additional_context": ""
+}
